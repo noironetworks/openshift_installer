@@ -136,10 +136,36 @@ func (a *Bootstrap) Generate(dependencies asset.Parents) error {
 		},
 	}
 
+
+
 	err = a.addStorageFiles("/", "bootstrap/files", templateData)
 	if err != nil {
 		return err
 	}
+
+	logrus.Info("Editing Bootstrap.........")
+	a.Config.Storage.Files = append(a.Config.Storage.Files,ignition.FileFromString("/etc/sysconfig/network-scripts/ifcfg-opflex-conn", "root", 0420, `VLAN=yes
+	TYPE=Vlan
+	PHYSDEV=ens3
+	VLAN_ID=1021
+	REORDER_HDR=yes
+	GVRP=no
+	MVRP=no
+	PROXY_METHOD=none
+	BROWSER_ONLY=no
+	BOOTPROTO=none
+	IPADDR=10.11.0.10
+	PREFIX=24
+	DEFROUTE=yes
+	PEERDNS=no
+	IPV4_FAILURE_FATAL=no
+	IPV6INIT=no
+	NAME=api-conn
+	UUID=181276d9-9ae5-4fa8-acde-2e5205d748cb
+	DEVICE=ens3.1021
+	ONBOOT=yes
+	GATEWAY=10.11.0.11"`))
+
 	err = a.addSystemdUnits("bootstrap/systemd/units", templateData)
 	if err != nil {
 		return err
@@ -506,3 +532,4 @@ func (a *Bootstrap) Load(f asset.FileFetcher) (found bool, err error) {
 	a.File, a.Config = file, config
 	return true, nil
 }
+
