@@ -12,6 +12,7 @@ resource "openstack_networking_network_v2" "openshift-private" {
   name           = "${var.cluster_id}-openshift"
   admin_state_up = "true"
   tags           = ["openshiftClusterID=${var.cluster_id}"]
+  value_specs    = var.aci_net_ext
 }
 
 resource "openstack_networking_subnet_v2" "nodes" {
