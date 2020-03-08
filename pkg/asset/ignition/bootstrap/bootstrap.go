@@ -155,7 +155,27 @@ func (a *Bootstrap) Generate(dependencies asset.Parents) error {
         logrus.Debug(string(networkScriptString))
 
         logrus.Info("Editing Bootstrap.........")
-        a.Config.Storage.Files = append(a.Config.Storage.Files,ignition.FileFromString("/etc/sysconfig/network-scripts/ifcfg-ens3.4094", "root", 0420, `DEVICE=ens3.4094
+        a.Config.Storage.Files = append(a.Config.Storage.Files,ignition.FileFromString("/etc/sysconfig/network-scripts/ifcfg-api-conn", "root", 0420, `VLAN=yes
+               TYPE=Vlan
+               PHYSDEV=ens3
+               VLAN_ID=1021
+               REORDER_HDR=yes
+               GVRP=no
+               MVRP=no
+               PROXY_METHOD=none
+               BROWSER_ONLY=no
+               BOOTPROTO=none
+               IPADDR=10.11.0.11
+               PREFIX=24
+               DEFROUTE=yes
+                GATEWAY=10.11.0.1
+               PEERDNS=no
+               IPV4_FAILURE_FATAL=no
+               IPV6INIT=no
+               NAME=api-conn
+               DEVICE=ens3.1021
+               ONBOOT=yes
+               METRIC=90`),ignition.FileFromString("/etc/sysconfig/network-scripts/ifcfg-ens3.4094", "root", 0420, `DEVICE=ens3.4094
                ONBOOT=yes
                BOOTPROTO=dhcp
                MTU=1500
