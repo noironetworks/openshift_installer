@@ -42,7 +42,6 @@ import (
 	openstackdefaults "github.com/openshift/installer/pkg/types/openstack/defaults"
 	"github.com/openshift/installer/pkg/types/vsphere"
 	"github.com/openshift/installer/pkg/version"
-        "strings"
 )
 
 const (
@@ -322,10 +321,6 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			return err
 		}
                          
-                logrus.Infof("Editing Bootstrap ign here...")
-                bootstrapIgn = strings.Replace(bootstrapIgn, `--container-runtime=remote`,`--container-runtime=remote \\\n   --address=10.11.0.11`, -1)
-                logrus.Debug("After Editing",bootstrapIgn)
-
 
 		data, err = openstacktfvars.TFVars(
 			masters[0].Spec.ProviderSpec.Value.Object.(*openstackprovider.OpenstackProviderSpec),
