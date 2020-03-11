@@ -187,6 +187,9 @@ type Networking struct {
 	// For libvirt, the default is 192.168.126.0/24.
 	MachineCIDR *ipnet.IPNet `json:"machineCIDR,omitempty"`
 
+        // Neutron CIDR consumed in Config.Platform
+        NeutronCIDR *ipnet.IPNet
+
 	// NetworkType is the type of network to install.
 	// +optional
 	// Default is OpenShiftSDN.
