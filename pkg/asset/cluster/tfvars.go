@@ -45,7 +45,6 @@ import (
 	"github.com/openshift/installer/pkg/types/openstack"
 	openstackdefaults "github.com/openshift/installer/pkg/types/openstack/defaults"
 	"github.com/openshift/installer/pkg/types/vsphere"
-	"github.com/openshift/installer/pkg/version"
 )
 
 const (
@@ -367,12 +366,15 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			return err
 		}
                          
+                neutronCIDR := &installConfig.Config.Platform.OpenStack.NeutronCIDR.IPNet
+                neutronCIDRString := neutronCIDR.String()
 
 		data, err = openstacktfvars.TFVars(
 			masters[0].Spec.ProviderSpec.Value.Object.(*openstackprovider.OpenstackProviderSpec),
 			installConfig.Config.Platform.OpenStack.Cloud,
 			installConfig.Config.Platform.OpenStack.ExternalNetwork,
                         installConfig.Config.Platform.OpenStack.AciNetExt,
+                        neutronCIDRString,
 			installConfig.Config.Platform.OpenStack.ExternalDNS,
 			installConfig.Config.Platform.OpenStack.LbFloatingIP,
 			apiVIP.String(),

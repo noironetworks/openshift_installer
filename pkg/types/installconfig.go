@@ -181,6 +181,15 @@ func (p *Platform) Name() string {
 
 // Networking defines the pod network provider in the cluster.
 type Networking struct {
+	// MachineCIDR is the IP address pool for machines.
+	// +optional
+	// Default is 10.0.0.0/16 for all platforms other than libvirt.
+	// For libvirt, the default is 192.168.126.0/24.
+	//MachineCIDR *ipnet.IPNet `json:"machineCIDR,omitempty"`
+
+        // Neutron CIDR consumed in Config.Platform
+        NeutronCIDR *ipnet.IPNet
+
 	// NetworkType is the type of network to install.
 	// +optional
 	// Default is OpenShiftSDN.
