@@ -426,7 +426,6 @@ func (a *Bootstrap) addSystemdUnits(uri string, templateData *bootstrapTemplateD
 		"kubelet.service":                 {},
 		"chown-gatewayd-key.service":      {},
 		"systemd-journal-gatewayd.socket": {},
-		"approve-csr.service":             {},
 		// baremetal & openstack platform services
 		"keepalived.service": {},
 		"coredns.service":    {},
