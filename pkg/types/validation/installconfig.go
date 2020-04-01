@@ -168,21 +168,12 @@ func ValidateInstallConfig(c *types.InstallConfig, openStackValidValuesFetcher o
                         allErrs = append(allErrs, field.Invalid(tarField.Child("Unmarshal"),
                                 c.Platform.OpenStack.AciNetExt.ProvisionTar, err.Error()))
                 } else {
-			machineCIDR := c.Networking.MachineCIDR
-                        // Validate against values from install config
+			c.Platform.OpenStack.AciNetExt.KubeApiVLAN = strconv.Itoa(config.KubeApiVLAN)
+			c.Platform.OpenStack.AciNetExt.InfraVLAN = strconv.Itoa(config.InfraVLAN)
+			c.Platform.OpenStack.AciNetExt.ServiceVLAN = strconv.Itoa(config.ServiceVLAN)
 
-                        if (strconv.Itoa(config.InfraVLAN) != c.Platform.OpenStack.AciNetExt.InfraVLAN) {
-                                allErrs = append(allErrs, field.Invalid(field.NewPath("InfraVLAN"),
-                                        c.Platform.OpenStack.AciNetExt.InfraVLAN, "InfraVLAN values in acc-provision input and install config have to be the same"))
-                        }
-                        if (strconv.Itoa(config.ServiceVLAN) != c.Platform.OpenStack.AciNetExt.ServiceVLAN) {
-                                allErrs = append(allErrs, field.Invalid(field.NewPath("ServiceVLAN"),
-                                        c.Platform.OpenStack.AciNetExt.ServiceVLAN, "ServiceVLAN values in acc-provision input and install config have to be the same"))
-                        }
-                        if (strconv.Itoa(config.KubeApiVLAN) != c.Platform.OpenStack.AciNetExt.KubeApiVLAN) {
-                                allErrs = append(allErrs, field.Invalid(field.NewPath("KubeApiVLAN"),
-                                        c.Platform.OpenStack.AciNetExt.KubeApiVLAN, "KubeApiVLAN values in acc-provision input and install config have to be the same"))
-                        }
+                        // Validate against values from install config
+			machineCIDR := c.Networking.MachineCIDR
                         if DiffSubnets(config.NodeSubnet, machineCIDR) {
                                 allErrs = append(allErrs, field.Invalid(field.NewPath("MachineCIDR"),
                                         c.Networking.MachineCIDR, "node_subnet in acc-provision input has to be the same as machineCIDR"))
