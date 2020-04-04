@@ -56,7 +56,7 @@
         "image": "rhcos-43.81.202001142154.0-azure.x86_64.vhd",
         "url": "https://rhcos.blob.core.windows.net/imagebucket/rhcos-43.81.202001142154.0-azure.x86_64.vhd"
     },
-    "baseURI": "https://releases-art-rhcos.svc.ci.openshift.org/art/storage/releases/rhcos-4.3/43.81.202001142154.0/x86_64/",
+    "baseURI": "",
     "buildid": "43.81.202001142154.0",
     "gcp": {
         "image": "rhcos-43-81-202001142154-0",
@@ -102,7 +102,7 @@
             "uncompressed-size": 3340763136
         },
         "openstack": {
-            "path": "rhcos-43.81.202001142154.0-openstack.x86_64.qcow2.gz",
+            "path": "rhcos-43.81.202001142154",
             "sha256": "a1bda656fa0892f7b936fdc6b6a6086bddaed5dafacedcd7a1e811abb78fe3b0",
             "size": 801466080,
             "uncompressed-sha256": "504b9008adf89bb3d05b75d393e057c6d66ba6c92cf631ca4445d99bbf7e2a57",

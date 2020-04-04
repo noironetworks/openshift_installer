@@ -47,10 +47,11 @@ func GenerateOpenStackImageName(rhcosImage, infraID string) (imageName string, i
 	// should be created by the installer with the universal name "<infraID>-rhcos". Otherwise, it means
 	// that we are given the name of the pre-created Glance image, which the installer should use for node
 	// provisioning.
-	_, err := url.ParseRequestURI(rhcosImage)
-	if err != nil {
-		return rhcosImage, false
-	}
-
-	return infraID + "-rhcos", true
+        return rhcosImage, false
+	// _, err := url.ParseRequestURI(rhcosImage)
+	// if err != nil {
+        // 		return rhcosImage, false
+	// }
+        //
+	// return infraID + "-rhcos", true
 }
