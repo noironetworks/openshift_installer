@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
         "math"
+	"net/url"
+	"path/filepath"
         "strconv"
         "strings"
 
@@ -71,10 +73,27 @@ func TFVars(masterConfig *v1alpha1.OpenstackProviderSpec, cloud string, external
 	cfg.BaseImageName = imageName
 	if isURL {
 		// Valid URL -> use baseImage as a URL that will be used to create new Glance image with name "<infraID>-rhcos".
-		localFilePath, err := cache.DownloadImageFile(baseImage)
+		var localFilePath string
+
+		url, err := url.Parse(baseImage)
 		if err != nil {
 			return nil, err
 		}
+
+		// We support 'http(s)' and 'file' schemes. If the scheme is http(s), then we will upload a file from that
+		// location. Otherwise will take local file path from the URL.
+		switch url.Scheme {
+		case "http", "https":
+			localFilePath, err = cache.DownloadImageFile(baseImage)
+			if err != nil {
+				return nil, err
+			}
+		case "file":
+			localFilePath = filepath.FromSlash(url.Path)
+		default:
+			return nil, errors.Errorf("Unsupported URL scheme: '%v'", url.Scheme)
+		}
+
 		cfg.BaseImageLocalFilePath = localFilePath
 	} else {
 		// Not a URL -> use baseImage value as an overridden Glance image name.
