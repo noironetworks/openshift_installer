@@ -175,11 +175,11 @@ func ValidateInstallConfig(c *types.InstallConfig, openStackValidValuesFetcher o
                         if DiffSubnets(config.NodeSubnet, machineCIDR) {
 				option := UserPrompt(config.NodeSubnet, machineCIDR, "node_subnet", "machineCIDR")
 				if (option == true) {
-					c.Networking.MachineCIDR, _ = ipnet.ParseCIDR(config.NodeSubnet)
+					c.Networking.DeprecatedMachineCIDR, _ = ipnet.ParseCIDR(config.NodeSubnet)
 					log.Print("Setting machineCIDR to " + config.NodeSubnet)
 				} else {
                                 	allErrs = append(allErrs, field.Invalid(field.NewPath("machineCIDR"),
-                                        	c.Networking.MachineCIDR.String(), "node_subnet in acc-provision input(" + config.NodeSubnet + ") has to be the same as machineCIDR in install-config.yaml(" + machineCIDR.String() + ")"))
+                                        	c.Networking.DeprecatedMachineCIDR.String(), "node_subnet in acc-provision input(" + config.NodeSubnet + ") has to be the same as machineCIDR in install-config.yaml(" + machineCIDR.String() + ")"))
 				}
                         }
                         if DiffSubnets(config.PodSubnet, clusterNetworkCIDR) {
