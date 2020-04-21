@@ -5,8 +5,11 @@ import (
         "bytes"
 	"compress/gzip"
 	"fmt"
+	yamlv2 "gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
+	"log"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -20,6 +23,8 @@ import (
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/templates/content/openshift"
+	"github.com/openshift/installer/pkg/ipnet"
+	"github.com/openshift/installer/pkg/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -81,6 +86,50 @@ type Networking struct {
 }
 
 var _ asset.WritableAsset = (*Networking)(nil)
+
+type AciContainersConfig struct {
+        Data ConfigData `yaml:data,omitempty`
+}
+
+type ConfigData struct {
+        HostConfig string `yaml:"host-agent-config"`
+}
+
+type HostConfigMap struct {
+        ServiceVLAN int    `yaml:"service-vlan"`
+        InfraVLAN   int    `yaml:"aci-infra-vlan"`
+        KubeApiVLAN int    `yaml:"kubeapi-vlan"`
+        PodSubnet   string `yaml:"pod-subnet"`
+        NodeSubnet  string `yaml:"node-subnet"`
+}
+
+type ClusterConfig03 struct {
+	ApiVersion string     `yaml:"apiVersion"`
+        Kind       string     `yaml:"kind"`
+        Metadata   MetaEntry  `yaml:"metadata,omitempty"`
+	Spec       SpecEntry  `yaml:"spec,omitempty"`
+}
+
+type MetaEntry struct {
+	Name	string `yaml:"name"`
+}
+
+type SpecEntry struct {
+	Multus		bool				`yaml:"disableMultiNetwork"`
+        ClusterNetwork	[]ClusterEntry 			`yaml:"clusterNetwork,omitempty"`  
+        DefaultNetwork  DefaultNetEntry			`yaml:"defaultNetwork,omitempty"`
+        NetworkType	string				`yaml:"networkType,omitempty"`
+        ServiceNetwork	[]string			`yaml:"serviceNetwork,omitempty"`
+}
+
+type ClusterEntry struct {
+        CIDR		string	`yaml:"cidr"`
+	HostPrefix	int32	`yaml:"hostPrefix"`
+}
+
+type DefaultNetEntry struct {
+	Type	string	`yaml:"type"`
+}
 
 // Name returns a human friendly name for the operator.
 func (no *Networking) Name() string {
@@ -167,6 +216,136 @@ func (no *Networking) Generate(dependencies asset.Parents) error {
                 },
         }
 
+	err = CiscoAciValidation(installConfig)
+	if err != nil {
+		return err
+	}
+
+	err = no.CiscoAciManifest(installConfig, netConfig)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func CiscoAciValidation(installConfig *installconfig.InstallConfig) error {
+
+	// Check if installConfg input has a valid installerHostSubnet value
+	_, err := ipnet.ParseCIDR(installConfig.Config.Platform.OpenStack.AciNetExt.InstallerHostSubnet)
+	if err != nil {
+		return errors.WithMessage(err, "Please use valid value of installerHostSubnet")
+	}
+
+	r, err := os.Open(installConfig.Config.Platform.OpenStack.AciNetExt.ProvisionTar)
+        if err != nil {
+		return errors.WithMessage(err, "Invalid provisionTar path/file")
+	}
+	config, err := ExtractTarGz(r)
+	if err != nil {
+		return errors.WithMessage(err, "Unable to extract yamls from provisionTar")
+	}
+	installConfig.Config.Platform.OpenStack.AciNetExt.KubeApiVLAN = strconv.Itoa(config.KubeApiVLAN)
+	installConfig.Config.Platform.OpenStack.AciNetExt.InfraVLAN = strconv.Itoa(config.InfraVLAN)
+	installConfig.Config.Platform.OpenStack.AciNetExt.ServiceVLAN = strconv.Itoa(config.ServiceVLAN)
+	machineCIDR := &installConfig.Config.Networking.MachineNetwork[0].CIDR
+	clusterNetworkCIDR := &installConfig.Config.Networking.ClusterNetwork[0].CIDR
+	nodeDiff := DiffSubnets(config.NodeSubnet, machineCIDR)
+    	if nodeDiff != nil {
+		option := UserPrompt(nodeDiff.String(), machineCIDR, "node_subnet", "machineCIDR")
+		if (option == true) {
+			installConfig.Config.Networking.DeprecatedMachineCIDR, _ = ipnet.ParseCIDR(nodeDiff.String())
+			log.Print("Setting machineCIDR to " + nodeDiff.String())
+		} else {
+			err := errors.New("node_subnet in acc-provision input(" + nodeDiff.String() + ") has to be the same as machineCIDR in install-config.yaml(" + machineCIDR.String() + ")") 
+			return err
+		}
+    	}
+	clusterDiff := DiffSubnets(config.PodSubnet, clusterNetworkCIDR)
+    	if clusterDiff != nil {
+		option := UserPrompt(clusterDiff.String(), clusterNetworkCIDR, "pod_subnet", "clusterNetworkCIDR")
+		if (option == true) {
+			parsedCIDR, _ := ipnet.ParseCIDR(clusterDiff.String())
+			installConfig.Config.Networking.ClusterNetwork[0].CIDR = *parsedCIDR
+			log.Print("Setting clusterNetwork CIDR to " + clusterDiff.String())
+		} else {
+			err := errors.New("pod_subnet in acc-provision input(" + clusterDiff.String() + ") has to be the same as clusterNetwork:cidr in install-config.yaml(" + clusterNetworkCIDR.String() + ")")
+			return err
+		}
+    	}
+
+	return nil
+}
+
+func DiffSubnets(sub1 string, sub2 *ipnet.IPNet) *net.IPNet {
+        // Returns first subnet if the subnets are different
+        _, net1, _ := net.ParseCIDR(sub1)
+        if net1.String() != sub2.String() {
+                return net1
+	}
+        return nil
+}
+
+func UserPrompt(sub1 string, sub2 *ipnet.IPNet, item1 string, item2 string) bool {
+	var option string
+	log.Print("There's a discrepancy between " + item1 + "(" + sub1 + ") in acc-provision input and " + item2 + "(" + sub2.String() + ") in install-config.yaml")
+	log.Print("Enter Y to use acc-provision value, or N to exit installer and fix acc-provision tar")
+	fmt.Scanln(&option)
+	var op bool
+	if (option == "y" || option == "Y") {
+		op = true
+	}
+	return op
+}
+
+func ExtractTarGz(gzipStream io.Reader) (HostConfigMap, error) {
+	config := HostConfigMap{}
+        uncompressedStream, err := gzip.NewReader(gzipStream)
+        if err != nil {
+		return config, err
+        }
+
+        tarReader := tar.NewReader(uncompressedStream)
+
+        for true {
+                header, err := tarReader.Next()
+
+                if err == io.EOF {
+                        break
+                }
+
+                if err != nil {
+			return config, err
+                }
+
+                switch header.Typeflag {
+                case tar.TypeReg:
+                        temp, err := ioutil.ReadAll(tarReader)
+			if err != nil {
+				return config, err
+			}
+
+			// Unmarshal acc configmap to get acc-provision values
+                        if strings.Contains(header.Name, "aci-containers-config") {
+                                t := AciContainersConfig{}
+                                err = yamlv2.Unmarshal(temp, &t)
+                                if err != nil {
+					return config, err
+                                }
+                                err = yamlv2.Unmarshal([]byte(t.Data.HostConfig), &config)
+                                if err != nil {
+					return config, err
+                                }
+                        }
+                default:
+			return config, errors.New("Unsupported file type in tar")
+		}
+
+        }
+        return config, nil
+}
+
+func (no *Networking) CiscoAciManifest(installConfig *installconfig.InstallConfig, netConfig *types.Networking) error {
 	// Untar and add acc-provision files
 	r, _ := os.Open(installConfig.Config.Platform.OpenStack.AciNetExt.ProvisionTar)
 	uncompressedStream, _ := gzip.NewReader(r)
@@ -229,7 +408,7 @@ func (no *Networking) Generate(dependencies asset.Parents) error {
 		}
                 rdConfigData := &bytes.Buffer{}
                 data = map[string]string{"neutronCIDR": installConfig.Config.Platform.OpenStack.AciNetExt.NeutronCIDR.String()}
-                if err = rdConfigTmpl.Execute(rdConfigData, data); err != nil {
+                if err := rdConfigTmpl.Execute(rdConfigData, data); err != nil {
                         return errors.Wrapf(err, "failed to create rdconfig manifest from InstallConfig")
                 }
                 rdconfigFile := &asset.File{Filename: noRDconfigFilename, Data: rdConfigData.Bytes()}
@@ -237,6 +416,7 @@ func (no *Networking) Generate(dependencies asset.Parents) error {
 	}
 
 	return nil
+
 }
 
 // Files returns the files generated by the asset.

@@ -1,9 +1,10 @@
 package ignition
 
 import (
-        "text/template"
-	"net"
         "bytes"
+	"net"
+	"strconv"
+	"text/template"
 
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/coreos/ignition/config/util"
@@ -11,6 +12,7 @@ import (
 
 	igntypes "github.com/coreos/ignition/config/v2_2/types"
 	"github.com/openshift/installer/pkg/asset/installconfig"
+	"github.com/openshift/installer/pkg/ipnet"
 )
 
 // This creates a script which would create a node network interface with IP address with the same last 4 bits as the ens3.4094 interface IP
@@ -125,29 +127,35 @@ func NetworkScript(vlan string, defGateway string, mtu string) ([]byte, error) {
         return buf.Bytes(), nil
 }
 
-func IgnitionFiles(installConfig *installconfig.InstallConfig) []igntypes.File {
+func IgnitionFiles(installConfig *installconfig.InstallConfig) ([]igntypes.File, error) {
 	if installConfig.Config.Networking.NetworkType != "CiscoAci" {
-		return nil
+		return nil, nil
 	}
         machineCIDR := &installConfig.Config.Networking.MachineNetwork[0].CIDR.IPNet
         defaultGateway, _ := cidr.Host(machineCIDR, 1)
         kube_api_vlan := installConfig.Config.Platform.OpenStack.AciNetExt.KubeApiVLAN
+
         infra_vlan := installConfig.Config.Platform.OpenStack.AciNetExt.InfraVLAN
-        mtu_value := installConfig.Config.Platform.OpenStack.AciNetExt.Mtu
-        networkScriptString, _ := NetworkScript(kube_api_vlan, defaultGateway.String(), mtu_value)
+	mtuString, _ := strconv.Atoi(installConfig.Config.Platform.OpenStack.AciNetExt.Mtu)
+        mtuValue := strconv.Itoa(mtuString - 100)
+        networkScriptString, _ := NetworkScript(kube_api_vlan, defaultGateway.String(), mtuValue)
 
         neutronCIDR := &installConfig.Config.Platform.OpenStack.AciNetExt.NeutronCIDR.IPNet
         defaultNeutronGateway, _ := cidr.Host(neutronCIDR, 1)
         defaultNeutronGatewayStr := defaultNeutronGateway.String()
 
         installerHostSubnet := installConfig.Config.Platform.OpenStack.AciNetExt.InstallerHostSubnet
+	_, err := ipnet.ParseCIDR(installerHostSubnet)
+	if err != nil {
+		return nil, errors.Wrap(err, "Invalid value of installerHostSubnet")
+	}
         installerHostIP, installerHostNet, _ := net.ParseCIDR(installerHostSubnet)
         installerNetmask := net.IP(installerHostNet.Mask)
 	
 	ifcfg_ens3_string := `DEVICE=ens3.4094
                ONBOOT=yes
                BOOTPROTO=dhcp
-               MTU=` + mtu_value + `
+               MTU=` + mtuValue + `
                TYPE=Vlan
                VLAN=yes
                PHYSDEV=ens3
@@ -177,7 +185,7 @@ func IgnitionFiles(installConfig *installconfig.InstallConfig) []igntypes.File {
                NAME=opflex-conn
                DEVICE=ens3.`+ infra_vlan +`
                ONBOOT=yes
-               MTU=` + mtu_value
+               MTU=` + mtuValue
 
         ifcfg_uplink_conn_string := `TYPE=Ethernet
                PROXY_METHOD=none
@@ -189,7 +197,7 @@ func IgnitionFiles(installConfig *installconfig.InstallConfig) []igntypes.File {
                DEVICE=ens3
                ONBOOT=yes
                BOOTPROTO=none
-               MTU=` + mtu_value
+               MTU=` + mtuValue
 
         route_opflex_conn_string := `ADDRESS0=224.0.0.0
                NETMASK0=240.0.0.0
@@ -209,7 +217,7 @@ func IgnitionFiles(installConfig *installconfig.InstallConfig) []igntypes.File {
                         	FileFromString("/etc/sysconfig/network-scripts/route-opflex-conn", "root", 0420, route_opflex_conn_string),
                         	FileFromString("/etc/sysconfig/network-scripts/route-ens3.4094", "root", 0420, route_ens3_string))
 
-	return ignitionFiles
+	return ignitionFiles, nil
 }
 
 func SystemdUnitFiles(installConfig *installconfig.InstallConfig) []igntypes.Unit {

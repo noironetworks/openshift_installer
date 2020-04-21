@@ -11,6 +11,7 @@ import (
 const (
 	// DefaultCloudName is the default name of the cloud in clouds.yaml file.
 	DefaultCloudName = "openstack"
+	DefaultMTUValue = "1600"
 )
 
 // SetPlatformDefaults sets the defaults for the platform.
@@ -22,7 +23,7 @@ func SetPlatformDefaults(p *openstack.Platform, installConfig *types.InstallConf
 		}
 	}
         if p.AciNetExt.Mtu == "" {
-                p.AciNetExt.Mtu = "1500"
+                p.AciNetExt.Mtu = DefaultMTUValue
         }
 }
 

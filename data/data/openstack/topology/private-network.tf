@@ -13,6 +13,7 @@ resource "openstack_networking_network_v2" "openshift-private" {
     "apic:nested_domain_node_network_vlan" : var.aci_net_ext["kubeApiVlan"],
     "apic:nested_domain_service_vlan"      : var.aci_net_ext["serviceVlan"],
   }
+  mtu            = tonumber(var.aci_net_ext["mtu"])
 }
 
 resource "openstack_networking_subnet_v2" "nodes" {

@@ -107,12 +107,6 @@ func ValidatePlatform(p *openstack.Platform, n *types.Networking, fldPath *field
                                 }
         }
 
-	_, err = ipnet.ParseCIDR(p.AciNetExt.InstallerHostSubnet)
-	if err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("installerHostSubnet"),
-                		p.AciNetExt.InstallerHostSubnet, "installerHostSubnet has an invalid subnet value (" + p.AciNetExt.InstallerHostSubnet + ")"))
-	}
-
 	return allErrs
 }
 

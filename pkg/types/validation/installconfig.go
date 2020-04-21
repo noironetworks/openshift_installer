@@ -1,17 +1,10 @@
 package validation
 
 import (
-        "archive/tar"
-	"compress/gzip"
 	"fmt"
-        "gopkg.in/yaml.v2"
-        "io"
-        "io/ioutil"
-	"log"
 	"net"
 	"os"
 	"sort"
-        "strconv"
 	"strings"
 
 	dockerref "github.com/containers/image/docker/reference"
@@ -40,51 +33,6 @@ import (
 const (
 	masterPoolName = "master"
 )
-
-type AciContainersConfig struct {
-        Data ConfigData `yaml:data,omitempty`
-}
-
-type ConfigData struct {
-        HostConfig string `yaml:"host-agent-config"`
-}
-
-type HostConfigMap struct {
-        ServiceVLAN int    `yaml:"service-vlan"`
-        InfraVLAN   int    `yaml:"aci-infra-vlan"`
-        KubeApiVLAN int    `yaml:"kubeapi-vlan"`
-        PodSubnet   string `yaml:"pod-subnet"`
-        NodeSubnet  string `yaml:"node-subnet"`
-}
-
-type ClusterConfig03 struct {
-	ApiVersion string     `yaml:"apiVersion"`
-        Kind       string     `yaml:"kind"`
-        Metadata   MetaEntry  `yaml:"metadata,omitempty"`
-	Spec       SpecEntry  `yaml:"spec,omitempty"`
-}
-
-type MetaEntry struct {
-	Name	string `yaml:"name"`
-}
-
-type SpecEntry struct {
-	Multus		bool				`yaml:"disableMultiNetwork"`
-        ClusterNetwork	[]ClusterEntry 			`yaml:"clusterNetwork,omitempty"`  
-        DefaultNetwork  DefaultNetEntry			`yaml:"defaultNetwork,omitempty"`
-        NetworkType	string				`yaml:"networkType,omitempty"`
-        ServiceNetwork	[]string			`yaml:"serviceNetwork,omitempty"`
-}
-
-type ClusterEntry struct {
-        CIDR		string	`yaml:"cidr"`
-	HostPrefix	int32	`yaml:"hostPrefix"`
-}
-
-type DefaultNetEntry struct {
-	Type	string	`yaml:"type"`
-}
-
 
 // ClusterDomain returns the cluster domain for a cluster with the specified
 // base domain and cluster name.
@@ -138,49 +86,6 @@ func ValidateInstallConfig(c *types.InstallConfig, openStackValidValuesFetcher o
 		allErrs = append(allErrs, field.Required(field.NewPath("networking"), "networking is required"))
 	}
 
-	tarField := field.NewPath("ProvisionTar")
-        r, err := os.Open(c.Platform.OpenStack.AciNetExt.ProvisionTar)
-        if err != nil {
-		allErrs = append(allErrs, field.Invalid(tarField, c.Platform.OpenStack.AciNetExt.ProvisionTar, err.Error()))
-    	} else {
-                config, err := ExtractTarGz(r)
-                if err != nil {
-                        allErrs = append(allErrs, field.Invalid(tarField.Child("Unmarshal"),
-                                c.Platform.OpenStack.AciNetExt.ProvisionTar, err.Error()))
-                } else {
-			c.Platform.OpenStack.AciNetExt.KubeApiVLAN = strconv.Itoa(config.KubeApiVLAN)
-			c.Platform.OpenStack.AciNetExt.InfraVLAN = strconv.Itoa(config.InfraVLAN)
-			c.Platform.OpenStack.AciNetExt.ServiceVLAN = strconv.Itoa(config.ServiceVLAN)
-
-                        // Validate against values from install config
-			machineCIDR := &c.Networking.MachineNetwork[0].CIDR
-			clusterNetworkCIDR := &c.Networking.ClusterNetwork[0].CIDR
-			nodeDiff := DiffSubnets(config.NodeSubnet, machineCIDR)
-                        if nodeDiff != nil {
-				option := UserPrompt(nodeDiff.String(), machineCIDR, "node_subnet", "machineCIDR")
-				if (option == true) {
-					c.Networking.DeprecatedMachineCIDR, _ = ipnet.ParseCIDR(nodeDiff.String())
-					log.Print("Setting machineCIDR to " + nodeDiff.String())
-				} else {
-                                	allErrs = append(allErrs, field.Invalid(field.NewPath("machineCIDR"),
-                                        	c.Networking.DeprecatedMachineCIDR.String(), "node_subnet in acc-provision input(" + nodeDiff.String() + ") has to be the same as machineCIDR in install-config.yaml(" + machineCIDR.String() + ")"))
-				}
-                        }
-			clusterDiff := DiffSubnets(config.PodSubnet, clusterNetworkCIDR)
-                        if clusterDiff != nil {
-				option := UserPrompt(clusterDiff.String(), clusterNetworkCIDR, "pod_subnet", "clusterNetworkCIDR")
-				if (option == true) {
-					parsedCIDR, _ := ipnet.ParseCIDR(clusterDiff.String())
-					c.Networking.ClusterNetwork[0].CIDR = *parsedCIDR
-					log.Print("Setting clusterNetwork CIDR to " + clusterDiff.String())
-				} else {
-                                	allErrs = append(allErrs, field.Invalid(field.NewPath("clusterNetworkCIDR"),
-                                        	clusterNetworkCIDR.String(), "pod_subnet in acc-provision input(" + clusterDiff.String() + ") has to be the same as clusterNetwork:cidr in install-config.yaml(" + clusterNetworkCIDR.String() + ")"))
-				}
-                        }
-		}
-	}
-
 	allErrs = append(allErrs, validatePlatform(&c.Platform, field.NewPath("platform"), openStackValidValuesFetcher, c.Networking, c)...)
 	if c.ControlPlane != nil {
 		allErrs = append(allErrs, validateControlPlane(&c.Platform, c.ControlPlane, field.NewPath("controlPlane"))...)
@@ -200,74 +105,6 @@ func ValidateInstallConfig(c *types.InstallConfig, openStackValidValuesFetcher o
 	}
 
 	return allErrs
-}
-
-func DiffSubnets(sub1 string, sub2 *ipnet.IPNet) *net.IPNet {
-        // Returns first subnet if the subnets are different
-        _, net1, _ := net.ParseCIDR(sub1)
-        if net1.String() != sub2.String() {
-                return net1
-	}
-        return nil
-}
-
-func UserPrompt(sub1 string, sub2 *ipnet.IPNet, item1 string, item2 string) bool {
-	var option string
-	log.Print("There's a discrepancy between " + item1 + "(" + sub1 + ") in acc-provision input and " + item2 + "(" + sub2.String() + ") in install-config.yaml")
-	log.Print("Enter Y to use acc-provision value, or N to exit installer and fix acc-provision tar")
-	fmt.Scanln(&option)
-	var op bool
-	if (option == "y" || option == "Y") {
-		op = true
-	}
-	return op
-}
-
-func ExtractTarGz(gzipStream io.Reader) (HostConfigMap, error) {
-	config := HostConfigMap{}
-        uncompressedStream, err := gzip.NewReader(gzipStream)
-        if err != nil {
-		return config, err
-        }
-
-        tarReader := tar.NewReader(uncompressedStream)
-
-        for true {
-                header, err := tarReader.Next()
-
-                if err == io.EOF {
-                        break
-                }
-
-                if err != nil {
-			return config, err
-                }
-
-                switch header.Typeflag {
-                case tar.TypeReg:
-                        temp, err := ioutil.ReadAll(tarReader)
-			if err != nil {
-				return config, err
-			}
-
-			// Unmarshal acc configmap to get acc-provision values
-                        if strings.Contains(header.Name, "aci-containers-config") {
-                                t := AciContainersConfig{}
-                                err = yaml.Unmarshal(temp, &t)
-                                if err != nil {
-					return config, err
-                                }
-                                err = yaml.Unmarshal([]byte(t.Data.HostConfig), &config)
-                                if err != nil {
-					return config, err
-                                }
-                        }
-                default:
-			return config, errors.New("Unsupported file type in tar")
-		}
-
-        }
-        return config, nil
 }
 
 // ipAddressTypeByField is a map of field path to whether they request IPv4 or IPv6.

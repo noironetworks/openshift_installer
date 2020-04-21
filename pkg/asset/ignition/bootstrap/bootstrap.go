@@ -142,7 +142,10 @@ func (a *Bootstrap) Generate(dependencies asset.Parents) error {
 		return err
 	}
 
-	ignitionFiles := ign.IgnitionFiles(installConfig)
+	ignitionFiles, err := ign.IgnitionFiles(installConfig)
+	if err != nil {
+		return err
+	}
 	for _, ignFile := range ignitionFiles {
 		a.Config.Storage.Files = append(a.Config.Storage.Files, ignFile)
 	}

@@ -5,15 +5,15 @@ import (
 )
 
 type AciNetExtStruct struct {
-        InfraVLAN               string          `json:"infraVlan"`
-        KubeApiVLAN             string          `json:"kubeApiVlan"`
-        ServiceVLAN             string          `json:"serviceVlan"`
-        Mtu                     string          `json:"mtu,omitempty"`
-        ProvisionTar            string		`json:"provisionTar,omitempty"`
+        InfraVLAN               string          `json:"infraVlan,omitempty"`
+        KubeApiVLAN             string          `json:"kubeApiVlan,omitempty"`
+        ServiceVLAN             string          `json:"serviceVlan,omitempty"`
+        Mtu                     string          `json:"mtu"`
+        ProvisionTar            string		`json:"provisionTar"`
         NeutronCIDR             *ipnet.IPNet    `json:"neutronCIDR,omitempty"`
         InstallerHostSubnet	string          `json:"installerHostSubnet"`
-	ClusterSNATSubnet       string          `json:"clusterSNATPolicyIP"`
-	ClusterSNATDest         string          `json:"clusterSNATPolicyDestIP"`
+	ClusterSNATSubnet       string          `json:"clusterSNATPolicyIP,omitempty"`
+	ClusterSNATDest         string          `json:"clusterSNATPolicyDestIP,omitempty"`
 }
 
 // Platform stores all the global configuration that all
