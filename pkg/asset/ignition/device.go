@@ -4,6 +4,7 @@ import (
         "text/template"
 	"net"
         "bytes"
+	"strconv"
 
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/coreos/ignition/config/util"
@@ -18,12 +19,6 @@ var cloudProviderScriptTmpl = template.Must(template.New("user-data").Parse(`#!/
 # These are rendered through Go
 KUBE_API_VLAN={{.vlan}}
 KUBE_API_VLAN_DEVICE="ens3.${KUBE_API_VLAN}"
-HOSTNAME=$(hostname)
-echo $HOSTNAME
-if [[ "$HOSTNAME" == *"bootstrap"* ]]; then
-  echo "Node is bootstrap ..Exiting";
-  exit;
-fi
 ip=$(/sbin/ip -o -4 addr list $KUBE_API_VLAN_DEVICE | awk '{print $4}' | cut -d/ -f1)
 retVal=1
 while [ $retVal -ne 0 ]; do
@@ -149,8 +144,8 @@ func NetworkScript(vlan string, defGateway string, mtu string) ([]byte, error) {
         buf := &bytes.Buffer{}
         data := map[string]string{
 		"vlan":          vlan,
-                "defGateway":    defGateway,
-                "mtu":           mtu,
+		"defGateway":    defGateway,
+		"mtu":           mtu,
 	}
 	if err := networkScriptTmpl.Execute(buf, data); err != nil {
 		return nil, errors.Wrap(err, "failed to execute user-data template")
@@ -158,17 +153,18 @@ func NetworkScript(vlan string, defGateway string, mtu string) ([]byte, error) {
         return buf.Bytes(), nil
 }
 
-func IgnitionFiles(installConfig *installconfig.InstallConfig) []igntypes.File {
+func IgnitionFiles(installConfig *installconfig.InstallConfig, is_bootstrap bool) []igntypes.File {
 	if installConfig.Config.Networking.NetworkType != "CiscoAci" {
 		return nil
 	}
         machineCIDR := &installConfig.Config.Networking.MachineNetwork[0].CIDR.IPNet
         defaultGateway, _ := cidr.Host(machineCIDR, 1)
-        kube_api_vlan := installConfig.Config.Platform.OpenStack.AciNetExt.KubeApiVLAN
-        infra_vlan := installConfig.Config.Platform.OpenStack.AciNetExt.InfraVLAN
-        mtu_value := installConfig.Config.Platform.OpenStack.AciNetExt.Mtu
-        cloudProviderScriptString, _ := CloudProviderScript(kube_api_vlan)
-        networkScriptString, _ := NetworkScript(kube_api_vlan, defaultGateway.String(), mtu_value)
+        kubeApiVLAN := installConfig.Config.Platform.OpenStack.AciNetExt.KubeApiVLAN
+        infraVLAN := installConfig.Config.Platform.OpenStack.AciNetExt.InfraVLAN
+        mtuString, _ := strconv.Atoi(installConfig.Config.Platform.OpenStack.AciNetExt.Mtu)
+        mtuValue := strconv.Itoa(mtuString - 100)
+	    cloudProviderScriptString, _ := CloudProviderScript(kubeApiVLAN)
+        networkScriptString, _ := NetworkScript(kubeApiVLAN, defaultGateway.String(), mtuValue)
         neutronCIDR := &installConfig.Config.Platform.OpenStack.AciNetExt.NeutronCIDR.IPNet
         defaultNeutronGateway, _ := cidr.Host(neutronCIDR, 1)
         defaultNeutronGatewayStr := defaultNeutronGateway.String()
@@ -180,7 +176,7 @@ func IgnitionFiles(installConfig *installconfig.InstallConfig) []igntypes.File {
 	ifcfg_ens3_string := `DEVICE=ens3.4094
                ONBOOT=yes
                BOOTPROTO=dhcp
-               MTU=` + mtu_value + `
+               MTU=` + mtuValue + `
                TYPE=Vlan
                VLAN=yes
                PHYSDEV=ens3
@@ -197,7 +193,7 @@ func IgnitionFiles(installConfig *installconfig.InstallConfig) []igntypes.File {
         ifcfg_opflex_conn_string := `VLAN=yes
                TYPE=Vlan
                PHYSDEV=ens3
-               VLAN_ID=` + infra_vlan + `
+               VLAN_ID=` + infraVLAN + `
                REORDER_HDR=yes
                GVRP=no
                MVRP=no
@@ -208,9 +204,9 @@ func IgnitionFiles(installConfig *installconfig.InstallConfig) []igntypes.File {
                IPV4_FAILURE_FATAL=no
                IPV6INIT=no
                NAME=opflex-conn
-               DEVICE=ens3.`+ infra_vlan +`
+               DEVICE=ens3.`+ infraVLAN +`
                ONBOOT=yes
-               MTU=` + mtu_value
+               MTU=` + mtuValue
 
         ifcfg_uplink_conn_string := `TYPE=Ethernet
                PROXY_METHOD=none
@@ -222,7 +218,7 @@ func IgnitionFiles(installConfig *installconfig.InstallConfig) []igntypes.File {
                DEVICE=ens3
                ONBOOT=yes
                BOOTPROTO=none
-               MTU=` + mtu_value
+               MTU=` + mtuValue
 
         route_opflex_conn_string := `ADDRESS0=224.0.0.0
                NETMASK0=240.0.0.0
@@ -236,17 +232,22 @@ func IgnitionFiles(installConfig *installconfig.InstallConfig) []igntypes.File {
 	var ignitionFiles []igntypes.File
 	ignitionFiles = append(ignitionFiles,
 				FileFromString("/usr/local/bin/kube-api-interface.sh", "root", 0555, string(networkScriptString)),
-		        FileFromString("/usr/local/bin/node-cloud-provider.sh", "root", 0555, string(cloudProviderScriptString)),
 				FileFromString("/etc/sysconfig/network-scripts/ifcfg-ens3.4094", "root", 0420, ifcfg_ens3_string),
 				FileFromString("/etc/sysconfig/network-scripts/ifcfg-opflex-conn", "root", 0420, ifcfg_opflex_conn_string),
 				FileFromString("/etc/sysconfig/network-scripts/ifcfg-uplink-conn", "root", 0420, ifcfg_uplink_conn_string),
                         	FileFromString("/etc/sysconfig/network-scripts/route-opflex-conn", "root", 0420, route_opflex_conn_string),
                         	FileFromString("/etc/sysconfig/network-scripts/route-ens3.4094", "root", 0420, route_ens3_string))
 
+	if !is_bootstrap{
+		ignitionFiles = append(ignitionFiles,FileFromString(
+			"/usr/local/bin/node-cloud-provider.sh", "root", 0555,
+			string(cloudProviderScriptString)))
+	}
+
 	return ignitionFiles
 }
 
-func SystemdUnitFiles(installConfig *installconfig.InstallConfig) []igntypes.Unit {
+func SystemdUnitFiles(installConfig *installconfig.InstallConfig, is_bootstrap bool) []igntypes.Unit {
 	if installConfig.Config.Networking.NetworkType != "CiscoAci" {
                 return nil
         }
@@ -267,10 +268,11 @@ func SystemdUnitFiles(installConfig *installconfig.InstallConfig) []igntypes.Uni
 
 	systemdUnits = append(systemdUnits, nodeService)
 
-	nodeCloudProvider :=  igntypes.Unit{
-		Name:    "node-labels.service",
-		Enabled: util.BoolToPtr(true),
-		Contents: `[Unit]
+	if !is_bootstrap {
+		nodeCloudProvider := igntypes.Unit{
+			Name:    "node-cloud-provider.service",
+			Enabled: util.BoolToPtr(true),
+			Contents: `[Unit]
 		Description=Assigning Cloud Provider Extension to kubelet
 		Wants=kubelet.service
 		After=kubelet.service
@@ -280,7 +282,8 @@ func SystemdUnitFiles(installConfig *installconfig.InstallConfig) []igntypes.Uni
 		[Install]
 		WantedBy=multi-user.target`}
 
-	systemdUnits = append(systemdUnits, nodeCloudProvider)
+		systemdUnits = append(systemdUnits, nodeCloudProvider)
+	}
 
 	machineConfigDaemonPath := igntypes.Unit{
 		Name:    "machine-config-daemon-force.path",

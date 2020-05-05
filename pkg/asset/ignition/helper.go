@@ -12,14 +12,15 @@ import (
 
 func CheckIgnitionFiles(t *testing.T, ignConfig *igntypes.Config) {
 
-	actualStringList := [6]string{ GetActualKubeApiInterfaceStr(),
+	actualStringList := [7]string{ GetActualKubeApiInterfaceStr(),
 				GetActualIfcfgEns34094Str(),
 				GetActualIfcfgOpflexConnStr(),
 				GetActualIfcfgUplinkConnStr(),
 				GetActualRouteOpflexConnStr(),
-				GetActualRouteEns34094Str() }
+				GetActualRouteEns34094Str(),
+				GetActualCloudProviderStr(),}
 
-	for i := 0; i < 6; i++ {
+	for i := 0; i < 7; i++ {
 		expected := ignConfig.Storage.Files[i].FileEmbedded1.Contents.Source
 		actualStr := actualStringList[i]
 		compareScripts(t, expected, actualStr)
@@ -36,9 +37,10 @@ func compareScripts(t *testing.T, expected string, actualStr string) {
 
 func CheckSystemdUnitFiles(t *testing.T, actualUnits []igntypes.Unit) {
 
-	expectedUnitData := [3]igntypes.Unit{GetNodeInterfaceService(),
+	expectedUnitData := [4]igntypes.Unit{GetNodeInterfaceService(),
+					GetCloudProviderService(),
 					GetMachineConfigDaemonForcePath(),
-					GetMachineConfigDaemonService()}
+					GetMachineConfigDaemonService(),}
 					
         for i, u := range actualUnits {
 		assert.Equal(t, u, expectedUnitData[i], "unexpected " + expectedUnitData[i].Name)
@@ -53,7 +55,7 @@ func GetActualKubeApiInterfaceStr() string {
 # These are rendered through Go
 KUBE_API_VLAN=1021
 DEFAULT_GATEWAY=1.2.3.1
-MTU_VALUE=1600
+MTU_VALUE=1400
 
 IFC_4094=ens3.4094
 KUBE_API_VLAN_DEVICE="ens3.${KUBE_API_VLAN}"
@@ -152,7 +154,7 @@ func GetActualIfcfgEns34094Str() string {
 	actualIfcfgEns34094Str := `DEVICE=ens3.4094
                ONBOOT=yes
                BOOTPROTO=dhcp
-               MTU=1600
+               MTU=1400
                TYPE=Vlan
                VLAN=yes
                PHYSDEV=ens3
@@ -187,7 +189,7 @@ func GetActualIfcfgOpflexConnStr() string {
                NAME=opflex-conn
                DEVICE=ens3.4094
                ONBOOT=yes
-               MTU=1600`
+               MTU=1400`
 
 	return actualIfcfgOpflexConnStr
 }
@@ -204,7 +206,7 @@ func GetActualIfcfgUplinkConnStr() string {
                DEVICE=ens3
                ONBOOT=yes
                BOOTPROTO=none
-               MTU=1600`
+               MTU=1400`
 
 	return actualIfcfgUplinkConnStr
 }
@@ -225,6 +227,26 @@ func GetActualRouteEns34094Str() string {
                GATEWAY0=5.6.7.9`
 
 	return actualRouteEns34094Str
+}
+
+func GetActualCloudProviderStr() string {
+
+	actualCloudProviderStr := `#!/bin/bash
+# These are rendered through Go
+KUBE_API_VLAN=1021
+KUBE_API_VLAN_DEVICE="ens3.${KUBE_API_VLAN}"
+ip=$(/sbin/ip -o -4 addr list $KUBE_API_VLAN_DEVICE | awk '{print $4}' | cut -d/ -f1)
+retVal=1
+while [ $retVal -ne 0 ]; do
+echo "Node IP is ${ip}"
+oc get nodes --kubeconfig=/var/lib/kubelet/kubeconfig  -o wide | grep $ip
+retVal=$?
+done
+grep -zo 'cloud-provider=openstack \\' /etc/systemd/system/kubelet.service  || sed -i '/kubelet \\/a\      \--cloud-provider=openstack \\\n      --cloud-config=/etc/kubernetes/cloud.conf \\' /etc/systemd/system/kubelet.service
+systemctl daemon-reload
+systemctl restart kubelet`
+
+	return actualCloudProviderStr
 }
 
 func GetNodeInterfaceService() igntypes.Unit {
@@ -269,4 +291,20 @@ ExecStart=touch /run/machine-config-daemon-force
 [Install]
 WantedBy=multi-user.target`}
 	return machineConfigDaemonService
+}
+
+func GetCloudProviderService() igntypes.Unit {
+	nodeCloudProvider := igntypes.Unit{
+		Name:    "node-cloud-provider.service",
+		Enabled: util.BoolToPtr(true),
+		Contents: `[Unit]
+		Description=Assigning Cloud Provider Extension to kubelet
+		Wants=kubelet.service
+		After=kubelet.service
+		[Service]
+		Type=simple
+		ExecStart=/usr/local/bin/node-cloud-provider.sh
+		[Install]
+		WantedBy=multi-user.target`}
+	return nodeCloudProvider
 }
