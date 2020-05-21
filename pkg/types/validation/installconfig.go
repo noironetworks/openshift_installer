@@ -8,6 +8,7 @@ import (
         "io"
         "io/ioutil"
 	"log"
+	"math"
 	"net"
 	"os"
 	"sort"
@@ -163,13 +164,14 @@ func ValidateInstallConfig(c *types.InstallConfig, openStackValidValuesFetcher o
 			provisionSubnetSize := controllerConfig.PodSubnetChunkSize
 			if inputSubnetSize != provisionSubnetSize {
 				option := UserPrompt(strconv.Itoa(provisionSubnetSize),
-						strconv.Itoa(inputSubnetSize), "pod_subnet_chunk_size", "hostPrefix")
+						strconv.Itoa(inputSubnetSize), "pod_subnet_chunk_size", "pod IP pool size obtained from hostPrefix")
                                 if (option == true) {
-                                        c.Networking.ClusterNetwork[0].HostPrefix = int32(provisionSubnetSize)
-                                        log.Print("Setting clusterNetwork hostPrefix to " + strconv.Itoa(provisionSubnetSize))
+                                        prefixFromProvisionSubnetSize := ConvertToPrefix(provisionSubnetSize)
+                                        c.Networking.ClusterNetwork[0].HostPrefix = prefixFromProvisionSubnetSize
+                                        log.Print("Setting clusterNetwork hostPrefix to " + strconv.Itoa(int(prefixFromProvisionSubnetSize)))
                                 } else {
                                         allErrs = append(allErrs, field.Invalid(field.NewPath("clusterNetworkHostPrefix"),
-                                                strconv.Itoa(int(hostPrefix)), "pod_subnet_chunk_size in acc-provision input(" + strconv.Itoa(provisionSubnetSize) + ") has to be the same as clusterNetwork:hostPrefix in install-config.yaml(" + strconv.Itoa(inputSubnetSize) + ")"))
+                                                strconv.Itoa(int(hostPrefix)), "pod_subnet_chunk_size in acc-provision input(" + strconv.Itoa(provisionSubnetSize) + ") has to be the same as the pod IP pool size obtained from clusterNetwork:hostPrefix in install-config.yaml(" + strconv.Itoa(inputSubnetSize) + ")"))
                                 }
 			}
 		}
@@ -207,6 +209,17 @@ func DiffSubnets(sub1 string, sub2 *ipnet.IPNet) *net.IPNet {
 
 func GetSubnetSize(hostPrefix int32) int {
 	return 1 << (32 - hostPrefix)
+}
+
+func ConvertToPrefix(provisionSubnetSize int) int32 {
+	logValue := math.Log2(float64(provisionSubnetSize))
+	var hostPrefix int32
+	if logValue != float64(int32(logValue)) {
+		hostPrefix = int32(logValue) + 1
+	} else {
+		hostPrefix = int32(logValue)
+	}
+	return 32 - hostPrefix
 }
 
 func UserPrompt(sub1 string, sub2 string, item1 string, item2 string) bool {
