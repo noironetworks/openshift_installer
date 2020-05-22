@@ -17,7 +17,7 @@ var (
 	defaultMachineCIDR    = ipnet.MustParseCIDR("10.0.0.0/24")
 	defaultServiceNetwork = ipnet.MustParseCIDR("172.30.0.0/16")
 	defaultClusterNetwork = ipnet.MustParseCIDR("10.128.0.0/14")
-	defaultHostPrefix     = 23
+	defaultHostPrefix     = 27
 	defaultNetworkType    = "OpenShiftSDN"
 )
 
