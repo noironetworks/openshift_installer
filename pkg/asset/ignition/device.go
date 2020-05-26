@@ -4,7 +4,6 @@ import (
         "text/template"
 	"net"
         "bytes"
-	"strconv"
 	"strings"
 
 	"github.com/apparentlymart/go-cidr/cidr"
@@ -165,8 +164,7 @@ func IgnitionFiles(installConfig *installconfig.InstallConfig, is_bootstrap bool
         defaultGateway, _ := cidr.Host(machineCIDR, 1)
         kubeApiVLAN := installConfig.Config.Platform.OpenStack.AciNetExt.KubeApiVLAN
         infraVLAN := installConfig.Config.Platform.OpenStack.AciNetExt.InfraVLAN
-        mtuString, _ := strconv.Atoi(installConfig.Config.Platform.OpenStack.AciNetExt.Mtu)
-        mtuValue := strconv.Itoa(mtuString - 100)
+        mtuValue := installConfig.Config.Platform.OpenStack.AciNetExt.Mtu
 	cloudProviderScriptString, _ := CloudProviderScript(kubeApiVLAN)
         networkScriptString, _ := NetworkScript(kubeApiVLAN, defaultGateway.String(), mtuValue, machineCIDRMask)
         neutronCIDR := &installConfig.Config.Platform.OpenStack.AciNetExt.NeutronCIDR.IPNet
