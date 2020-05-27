@@ -11,7 +11,7 @@ import (
 const (
 	// DefaultCloudName is the default name of the cloud in clouds.yaml file.
 	DefaultCloudName = "openstack"
-	DefaultNeutronMTU = "1600"
+	DefaultNeutronMTU = "1500"
 	DefaultInstallerHostSubnet = "1.109.2.0/24"
 )
 
