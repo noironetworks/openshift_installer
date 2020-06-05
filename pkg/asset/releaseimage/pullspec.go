@@ -24,7 +24,7 @@ func (a *Image) Dependencies() []asset.Asset {
 // Generate creates the asset using the dependencies.
 func (a *Image) Generate(dependencies asset.Parents) error {
         logrus.Debugf("Found override for release image. Using the OKD registry")
-	pullSpec := "quay.io/openshift-release-dev/ocp-release@sha256:64320fbf95d968fc6b9863581a92d373bc75f563a13ae1c727af37450579f61a"
+	pullSpec := "quay.io/openshift-release-dev/ocp-release@sha256:59d6586cf44b66dcefddb9500e5b90d1329d82cd0dd008b74d3da0c5c22907f3"
 	a.PullSpec = pullSpec
 
 	ref, err := dockerref.ParseNamed(pullSpec)
