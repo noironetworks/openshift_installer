@@ -128,8 +128,6 @@
       userdata: "{{ lookup('file', 'worker.ign') | string }}"
       nics:
       - port-name: "{{ os_port_worker }}-{{ item.0 }}"
-<<<<<<< HEAD
-=======
       scheduler_hints:
         group: "{{ server_group_id }}"
       meta: "{{ cluster_id_tag }}"
