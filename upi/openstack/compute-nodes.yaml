@@ -27,8 +27,6 @@
       cmd: "openstack port set --tag {{ cluster_id_tag }} {{ item.1 }}-{{ item.0 }}"
     with_indexed_items: "{{ [os_port_worker] * os_compute_nodes_number }}"
 
-<<<<<<< HEAD
-=======
   - name: 'Create the Compute ports2'
     os_port:
       name: "{{ item.1 }}-{{ item.0 }}"
@@ -45,7 +43,6 @@
     with_indexed_items: "{{ [os_port_worker2] * os_compute_nodes_number }}"
     when: os_networking_type == "CiscoACI"
 
->>>>>>> 2352e05b8... Make ACI tasks conditional
   - name: 'List the Compute Trunks'
     command:
       cmd: "openstack network trunk list"
@@ -70,8 +67,6 @@
       nics:
       - port-name: "{{ os_port_worker }}-{{ item.0 }}"
       meta: "{{ cluster_id_tag }}"
-<<<<<<< HEAD
-=======
       - port-name: "{{ os_port_worker2 }}-{{ item.0 }}"
     with_indexed_items: "{{ [os_compute_server_name] * os_compute_nodes_number }}"
     when: os_networking_type == "CiscoACI"
@@ -93,6 +88,5 @@
       nat_destination: "{{ os_network }}"
       network: "{{ os_external_network }}"
       server: "{{ item.1 }}-{{ item.0 }}"
->>>>>>> 2352e05b8... Make ACI tasks conditional
     with_indexed_items: "{{ [os_compute_server_name] * os_compute_nodes_number }}"
     when: os_networking_type == "CiscoACI"
