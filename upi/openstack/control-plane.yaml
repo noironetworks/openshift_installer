@@ -48,7 +48,7 @@
     register: ports
     when: os_networking_type == "CiscoACI"
 
-  - name: 'Set Control Plane ports tag2'
+  - name: 'Set second Control Plane ports tag'
     command:
       cmd: "openstack port set --tag {{ cluster_id_tag }} {{ item.1 }}-{{ item.0 }}"
     with_indexed_items: "{{ [os_port_master2] * os_cp_nodes_number }}"

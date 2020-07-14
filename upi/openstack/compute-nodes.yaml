@@ -45,7 +45,7 @@
     register: ports
     when: os_networking_type == "CiscoACI"
 
-  - name: 'Set Compute ports tag2'
+  - name: 'Set second Compute ports tag'
     command:
       cmd: "openstack port set --tag {{ [cluster_id_tag] }} {{ item.1 }}-{{ item.0 }}"
     with_indexed_items: "{{ [os_port_worker2] * os_compute_nodes_number }}"
