@@ -27,18 +27,18 @@
       cmd: "openstack port set --tag {{ cluster_id_tag }} {{ item.1 }}-{{ item.0 }}"
     with_indexed_items: "{{ [os_port_worker] * os_compute_nodes_number }}"
 
-  - name: 'Create the second Compute ports'
+  - name: 'Create the ACI containers Compute ports'
     os_port:
       name: "{{ item.1 }}-{{ item.0 }}"
-      network: "{{ os_network2 }}"
-    with_indexed_items: "{{ [os_port_worker2] * os_compute_nodes_number }}"
+      network: "{{ os_aci_containers_network }}"
+    with_indexed_items: "{{ [os_aci_containers_port_worker] * os_compute_nodes_number }}"
     register: ports
     when: os_networking_type == "CiscoACI"
 
-  - name: 'Set second Compute ports tag'
+  - name: 'Set ACI containers Compute ports tag'
     command:
       cmd: "openstack port set --tag {{ [cluster_id_tag] }} {{ item.1 }}-{{ item.0 }}"
-    with_indexed_items: "{{ [os_port_worker2] * os_compute_nodes_number }}"
+    with_indexed_items: "{{ [os_aci_containers_port_worker] * os_compute_nodes_number }}"
     when: os_networking_type == "CiscoACI"
 
   - name: 'List the Compute Trunks'
@@ -89,13 +89,17 @@
       image: "{{ os_image_rhcos }}"
       flavor: "{{ os_flavor_worker }}"
       auto_ip: no
-      userdata: "{{ lookup('file', 'worker.ign') | string }}"
+      # The ignition filename will be concatenated with the Compute node
+      # name and its 0-indexed serial number.
+      # In this case, the first node will look for this filename:
+      #    "{{ infraID }}-worker-0-ignition.json"
+      userdata: "{{ lookup('file', [item.1, item.0, 'ignition.json'] | join('-')) | string }}"
       nics:
       - port-name: "{{ os_port_worker }}-{{ item.0 }}"
+      - port-name: "{{ os_aci_containers_port_worker }}-{{ item.0 }}"
       scheduler_hints:
         group: "{{ server_group_id }}"
       meta: "{{ cluster_id_tag }}"
-      - port-name: "{{ os_port_worker2 }}-{{ item.0 }}"
     with_indexed_items: "{{ [os_compute_server_name] * os_compute_nodes_number }}"
     when: os_networking_type == "CiscoACI"
 
