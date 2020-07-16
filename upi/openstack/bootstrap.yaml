@@ -29,15 +29,15 @@
       bootstrap_auto_ip: false
     when: os_bootstrap_fip is not defined
 
-  - name: 'Create the bootstrap server port2'
+  - name: 'Create the ACI containers bootstrap server port'
     os_port:
-      name: "{{ os_port_bootstrap2 }}"
-      network: "{{ os_network2 }}"
+      name: "{{ os_aci_containers_port_bootstrap }}"
+      network: "{{ os_aci_containers_network }}"
     when: os_networking_type == "CiscoACI"
 
-  - name: 'Set second bootstrap port tag'
+  - name: 'Set ACI containers bootstrap port tag'
     command:
-      cmd: "openstack port set --tag {{ cluster_id_tag }} {{ os_port_bootstrap2 }}"
+      cmd: "openstack port set --tag {{ cluster_id_tag }} {{ os_aci_containers_port_bootstrap }}"
     when: os_networking_type == "CiscoACI"
 
   - name: 'Create the bootstrap server'
@@ -61,7 +61,7 @@
       auto_ip: "{{ bootstrap_auto_ip | default(omit) }}"
       nics:
       - port-name: "{{ os_port_bootstrap }}"
-      - port-name: "{{ os_port_bootstrap2 }}"
+      - port-name: "{{ os_aci_containers_port_bootstrap }}"
     when: os_networking_type == "CiscoACI"
 
   - name: 'Create the bootstrap floating IP'
