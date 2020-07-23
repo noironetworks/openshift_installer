@@ -29,22 +29,22 @@
       cmd: "openstack port set --tag {{ cluster_id_tag }} {{ item.1 }}-{{ item.0 }}"
     with_indexed_items: "{{ [os_port_master] * os_cp_nodes_number }}"
 
-  - name: 'Create the second Control Plane ports'
+  - name: 'Create the ACI containers Control Plane ports'
     os_port:
       name: "{{ item.1 }}-{{ item.0 }}"
-      network: "{{ os_network2 }}"
+      network: "{{ os_aci_containers_network }}"
       allowed_address_pairs:
-      - ip_address: "{{ os_subnet_range2 | next_nth_usable(5) }}"
-      - ip_address: "{{ os_subnet_range2 | next_nth_usable(6) }}"
-      - ip_address: "{{ os_subnet_range2 | next_nth_usable(7) }}"
-    with_indexed_items: "{{ [os_port_master2] * os_cp_nodes_number }}"
+      - ip_address: "{{ os_aci_containers_subnet_range | next_nth_usable(5) }}"
+      - ip_address: "{{ os_aci_containers_subnet_range | next_nth_usable(6) }}"
+      - ip_address: "{{ os_aci_containers_subnet_range | next_nth_usable(7) }}"
+    with_indexed_items: "{{ [os_aci_containers_port_master] * os_cp_nodes_number }}"
     register: ports
     when: os_networking_type == "CiscoACI"
 
-  - name: 'Set second Control Plane ports tag'
+  - name: 'Set ACI containers Control Plane ports tag'
     command:
       cmd: "openstack port set --tag {{ cluster_id_tag }} {{ item.1 }}-{{ item.0 }}"
-    with_indexed_items: "{{ [os_port_master2] * os_cp_nodes_number }}"
+    with_indexed_items: "{{ [os_aci_containers_port_master] * os_cp_nodes_number }}"
     when: os_networking_type == "CiscoACI"
 
   - name: 'List the Control Plane Trunks'
@@ -74,7 +74,7 @@
       userdata: "{{ lookup('file', [item.1, item.0, 'ignition.json'] | join('-')) | string }}"
       nics:
       - port-name: "{{ os_port_master }}-{{ item.0 }}"
-      - port-name: "{{ os_port_master2 }}-{{ item.0 }}"
+      - port-name: "{{ os_aci_containers_port_master }}-{{ item.0 }}"
     with_indexed_items: "{{ [os_cp_server_name] * os_cp_nodes_number }}"
     when: os_networking_type == "CiscoACI"
 
