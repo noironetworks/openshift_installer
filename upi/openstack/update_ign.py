@@ -123,14 +123,23 @@ try:
 try:
     json_data = json.loads(data)
     aci_infra_vlan = json_data['aci-infra-vlan']
+    service_vlan = json_data['service-vlan']
 except:
     print("Couldn't extract host-agent-config from aci-containers ConfigMap")
+
+if 'neutron_network_mtu' not in inventory:
+    neutron_network_mtu = "1500"
+else:
+    neutron_network_mtu = str(inventory['neutron_network_mtu'])
 
 # Set infra_vlan field in inventory.yaml using accprovision tar value
 try:
     with open("inventory.yaml", 'r') as stream:
         cur_yaml = yaml.safe_load(stream)
         cur_yaml['all']['hosts']['localhost']['infra_vlan'] = aci_infra_vlan
+        cur_yaml['all']['hosts']['localhost']['service-vlan'] = service_vlan
+        if 'neutron_network_mtu' not in inventory:
+            cur_yaml['all']['hosts']['localhost']['neutron_network_mtu'] = neutron_network_mtu
 
     if cur_yaml:
         with open("inventory.yaml",'w') as yamlfile:
@@ -234,11 +243,6 @@ METRIC0=1000
     worker_count = inventory['os_compute_nodes_number']
 except:
     print("Relevant Fields are missing from inventory.yaml ")
-
-if 'neutron_network_mtu' not in inventory:
-    neutron_network_mtu = "1500"
-else:
-    neutron_network_mtu = str(inventory['neutron_network_mtu'])
 
 infra_vlan = str(aci_infra_vlan)
 infra_id = os.environ.get('INFRA_ID', 'openshift').encode()

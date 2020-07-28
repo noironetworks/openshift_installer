@@ -98,7 +98,7 @@
       cmd: "openstack network set {{ os_aci_containers_network }} --mtu {{ aci_cni['network_interfaces']['opflex']['mtu'] }}"
   - name: 'Set MTU for the first neutron network'
     command:
-      cmd: "openstack networrk set {{ os_network }} --mtu {{ neutron_network_mtu }}"
+      cmd: "openstack network set {{ os_network }} --mtu {{ neutron_network_mtu }}"
     when: os_networking_type == "CiscoACI"
 
   - name: 'Create ACI containers node network'
