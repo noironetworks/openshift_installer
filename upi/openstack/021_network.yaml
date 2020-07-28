@@ -4,11 +4,6 @@
   gather_facts: no
 
   tasks:
-  - name: 'Set MTU for the first neutron network'
-    command:
-      cmd: "openstack network set {{ os_network }} --mtu {{ neutron_network_mtu }}"
-    when: os_networking_type == "CiscoACI"
-
   - name: 'Create ACI containers node network'
     command:
       cmd: "neutron net-create {{ os_aci_containers_network }} --apic:nested-domain-name openshift-domain --apic:nested-domain-type openshift --apic:nested_domain_infra_vlan {{ infra_vlan }} --apic:nested_domain_service_vlan {{ service_vlan }}"
@@ -32,6 +27,11 @@
   - name: 'Set the ACI containers cluster subnet tag'
     command:
       cmd: "openstack subnet set --tag {{ cluster_id_tag }} {{ os_aci_containers_subnet }}"
+    when: os_networking_type == "CiscoACI"
+
+  - name: 'Set MTU for the ACI containers node  network'
+    command:
+      cmd: "openstack network set {{ os_aci_containers_network }} --mtu {{ neutron_network_mtu }}"
     when: os_networking_type == "CiscoACI"
 
   - name: 'Set dns nameserver'
