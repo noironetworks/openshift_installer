@@ -30,7 +30,7 @@
 
   - name: 'Create the cluster address-scope'
     command:
-      cmd: "neutron address-scope-update {{ aci_containers_addr_scope }} --apic:distinguished_names type=dict VRF={{ aci_containers_l3out_vrf }}"
+      cmd: "neutron address-scope-create {{ aci_containers_addr_scope }} 4 --apic:distinguished_names type=dict VRF={{ aci_containers_l3out_vrf }}"
 
   - name: 'Create the subnetpool'
     command:
@@ -167,3 +167,8 @@
     command:
       cmd: "openstack floating ip set --port {{ os_port_ingress }} {{ os_ingress_fip }}"
     when: os_ingress_fip is defined and os_ingress_fip|length>0
+
+  - name: 'Set MTU for the first neutron network'
+    command:
+      cmd: "openstack networrk set {{ os_network }} --mtu {{ neutron_network_mtu }}"
+    when: os_networking_type == "CiscoACI"
