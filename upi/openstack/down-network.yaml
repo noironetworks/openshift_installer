@@ -94,3 +94,12 @@
       - os_networking_type == "CiscoACI"
       - cisco_cluster_address_scope.stdout != ""
 
+  - name: 'Remove the cluster subnet pool'
+    command:
+      cmd: "openstack subnet pool delete {{ aci_containers_subnet_pool }}"
+    when: os_networking_type == "CiscoACI"
+
+  - name: 'Remove the cluster address-scope'
+    command:
+      cmd: "openstack address scope delete {{ aci_containers_addr_scope }}"
+    when: os_networking_type == "CiscoACI"

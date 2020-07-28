@@ -126,6 +126,11 @@
       cmd: "openstack subnet set --tag {{ cluster_id_tag }} {{ os_aci_containers_subnet }}"
     when: os_networking_type == "CiscoACI"
 
+  - name: 'Set MTU for the ACI containers node  network'
+    command:
+      cmd: "openstack network set {{ os_aci_containers_network }} --mtu {{ neutron_network_mtu }}"
+    when: os_networking_type == "CiscoACI"
+
   - name: 'Set dns nameserver'
     command:
       cmd: "openstack subnet set --dns-nameserver {{ dns_ip }} {{ os_subnet }}"
