@@ -32,6 +32,37 @@
       protocol: icmp
 
   - name: 'Create master-sg rule for all TCP ports'
+<<<<<<< HEAD
+=======
+    os_security_group_rule:
+      security_group: "{{ os_sg_master }}"
+      protocol: tcp
+      remote_ip_prefix: "{{ cluster_network_cidrs }}"
+    when: os_networking_type == "CiscoACI"
+
+  - name: 'Create master-sg rule for all UDP ports'
+    os_security_group_rule:
+      security_group: "{{ os_sg_master }}"
+      protocol: udp
+      remote_ip_prefix: "{{ cluster_network_cidrs }}"
+    when: os_networking_type == "CiscoACI"
+
+  - name: 'Create worker-sg rule for all TCP ports'
+    os_security_group_rule:
+      security_group: "{{ os_sg_worker }}"
+      protocol: tcp
+      remote_ip_prefix: "{{ cluster_network_cidrs }}"
+    when: os_networking_type == "CiscoACI"
+
+  - name: 'Create worker-sg rule for all UDP ports'
+    os_security_group_rule:
+      security_group: "{{ os_sg_worker }}"
+      protocol: udp
+      remote_ip_prefix: "{{ cluster_network_cidrs }}"
+    when: os_networking_type == "CiscoACI"
+
+  - name: 'Create master-sg rule "machine config server"'
+>>>>>>> d869b05a43 (Refactor to change ACI CNI inventory fields, tasks and SGs)
     os_security_group_rule:
       security_group: "{{ os_sg_master }}"
       protocol: tcp
@@ -186,15 +217,6 @@
       port_range_min: 2379
       port_range_max: 2380
 
-  - name: 'Create master-sg rule "etcd" for pod network'
-    os_security_group_rule:
-      security_group: "{{ os_sg_master }}"
-      protocol: tcp
-      remote_ip_prefix: "{{ cluster_network_cidrs }}"
-      port_range_min: 2379
-      port_range_max: 2380
-    when: os_networking_type == "CiscoACI"
-
   - name: 'Create master-sg rule "master ingress services (TCP)"'
     openstack.cloud.security_group_rule:
       security_group: "{{ os_sg_master }}"
@@ -232,10 +254,13 @@
       port_range_max: 22
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   - name: 'Create worker-sg rule "mDNS"'
 =======
 <<<<<<< HEAD
 =======
+=======
+>>>>>>> d869b05a43 (Refactor to change ACI CNI inventory fields, tasks and SGs)
   - name: 'Create worker-sg rule "mDNS"'
     os_security_group_rule:
       security_group: "{{ os_sg_worker }}"
@@ -253,7 +278,6 @@
       port_range_max: 53
     when: os_networking_type == "CiscoACI"
 
->>>>>>> 8d57619ec... Changes to user input, SGs, field names
   - name: 'Create worker-sg rule "Ingress HTTP"'
 >>>>>>> 26334dee06 (Changes to user input, SGs, field names)
     os_security_group_rule:
