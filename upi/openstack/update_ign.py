@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import shutil
 import tarfile
 import yaml
 
@@ -10,18 +11,21 @@ import yaml
 #According to the number of the master count, create the JSON files, and add hostname/network-scripts.
 #According to the number of the worker count, create the JSON files, and add hostname/network-scripts.
 
-# Read inventory.yaml for CiscoACI CNI variables
-with open("inventory.yaml", 'r') as stream:
+# Read inventory.yaml for CiscoACI CNI variable
+original_inventory = processed_inventory = "inventory.yaml"
+with open(original_inventory, 'r') as stream:
     try:
-        inventory = yaml.safe_load(stream)['all']['hosts']['localhost']
+        localhost = yaml.safe_load(stream)['all']['hosts']['localhost']
+        inventory = localhost['aci_cni']
     except yaml.YAMLError as exc:
         print(exc)
 
 # Get accprovision tar path from inventory
 try:
     acc_provision_tar = inventory['acc_provision_tar']
+    os_subnet_range = localhost['os_subnet_range']
 except:
-    print("inventory.yaml should have acc_provision_tar field")
+    print("inventory.yaml should have acc_provision_tar and os_subnet_range fields")
 
 # Read acc-provision for vlan values
 extract_to = './accProvisionTar'
@@ -47,30 +51,46 @@ try:
 except:
     print("Couldn't extract host-agent-config from aci-containers ConfigMap")
 
-if 'neutron_network_mtu' not in inventory:
+# Delete acc_provisionTar that was untarred previously
+try:
+    shutil.rmtree(extract_to)
+except OSError as e:
+    print ("Error: %s - %s." % (e.filename, e.strerror))
+
+if 'mtu' not in inventory['network_interfaces']['opflex']:
     neutron_network_mtu = "1500"
 else:
-    neutron_network_mtu = str(inventory['neutron_network_mtu'])
+    neutron_network_mtu = str(inventory['network_interfaces']['opflex']['mtu'])
+
+# Returns the mask value for a subnet, for example 10.0.0.0/24 returns 24
+def get_prefix_from_subnet(subnet):
+    mask = None
+    try:
+        split_subnet = subnet.split("/")
+        mask = split_subnet[1]
+    except:
+        print("os_subnet_range not in valid format i.e a.b.c.d/e")
+    return mask
 
 # Set infra_vlan field in inventory.yaml using accprovision tar value
 try:
-    with open("inventory.yaml", 'r') as stream:
+    with open(original_inventory, 'r') as stream:
         cur_yaml = yaml.safe_load(stream)
-        cur_yaml['all']['hosts']['localhost']['infra_vlan'] = aci_infra_vlan
-        cur_yaml['all']['hosts']['localhost']['service-vlan'] = service_vlan
-        if 'neutron_network_mtu' not in inventory:
-            cur_yaml['all']['hosts']['localhost']['neutron_network_mtu'] = neutron_network_mtu
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['infra_vlan'] = aci_infra_vlan
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['service_vlan'] = service_vlan
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['subnet_prefix_length'] = get_prefix_from_subnet(os_subnet_range)
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['mtu'] = neutron_network_mtu
 
     if cur_yaml:
-        with open("inventory.yaml",'w') as yamlfile:
+        with open(processed_inventory,'w') as yamlfile:
            yaml.safe_dump(cur_yaml, yamlfile)
 except:
     print("Unable to edit inventory.yaml")
 try:
-    node_interface = inventory['node_interface']
-    opflex_interface = inventory['opflex_interface']
-    master_count = inventory['os_cp_nodes_number']
-    worker_count = inventory['os_compute_nodes_number']
+    node_interface = inventory['network_interfaces']['node']['name']
+    opflex_interface = inventory['network_interfaces']['opflex']['name']
+    master_count = localhost['os_cp_nodes_number']
+    worker_count = localhost['os_compute_nodes_number']
 except:
     print("Relevant Fields are missing from inventory.yaml ")
 
