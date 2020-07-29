@@ -83,3 +83,16 @@ all:
       aci_containers_l3out_vrf: uni/tn-common/ctx-sauto_l3out-1_vrf
       aci_containers_subnet_pool: subpool-openshiftupi
       aci_containers_prefix_length: 27
+      aci_cni:
+        acc_provision_tar: /home/noiro/openupi/aci_deployment.yaml.tar.gz
+        network_interfaces:
+          node:
+            name: ens3
+            vrf: uni/tn-common/ctx-sauto_l3out-1_vrf
+            # no default MTU setting for node network
+          opflex: 
+            name: ens4
+            subnet: '16.11.0.0/24'
+            mtu: 1500
+        cluster_snat_policy_ip: </32>
+        # generated
