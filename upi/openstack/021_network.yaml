@@ -6,7 +6,7 @@
   tasks:
   - name: 'Create ACI containers node network'
     command:
-      cmd: "neutron net-create {{ os_aci_containers_network }} --apic:nested-domain-name openshift-domain --apic:nested-domain-type openshift --apic:nested_domain_infra_vlan {{ infra_vlan }} --apic:nested_domain_service_vlan {{ service_vlan }}"
+      cmd: "neutron net-create {{ os_aci_containers_network }} --apic:nested-domain-name openshift-domain --apic:nested-domain-type openshift --apic:nested_domain_infra_vlan {{ aci_cni['infra_vlan'] }} --apic:nested_domain_service_vlan {{ aci_cni['service_vlan'] }}"
     when: os_networking_type == "CiscoACI"
 
   - name: 'Set the ACI containers cluster network tag'
@@ -19,9 +19,9 @@
       name: "{{ os_aci_containers_subnet }}"
       network_name: "{{ os_aci_containers_network }}"
       no_gateway_ip: yes
-      cidr: "{{ os_aci_containers_subnet_range }}"
-      allocation_pool_start: "{{ os_aci_containers_subnet_range | next_nth_usable(10) }}"
-      allocation_pool_end: "{{ os_aci_containers_subnet_range | ipaddr('last_usable') }}"
+      cidr: "{{ aci_cni['network_interfaces']['opflex']['subnet'] }}"
+      allocation_pool_start: "{{ aci_cni['network_interfaces']['opflex']['subnet'] | next_nth_usable(10) }}"
+      allocation_pool_end: "{{ aci_cni['network_interfaces']['opflex']['subnet'] | ipaddr('last_usable') }}"
     when: os_networking_type == "CiscoACI"
 
   - name: 'Set the ACI containers cluster subnet tag'
@@ -29,9 +29,9 @@
       cmd: "openstack subnet set --tag {{ cluster_id_tag }} {{ os_aci_containers_subnet }}"
     when: os_networking_type == "CiscoACI"
 
-  - name: 'Set MTU for the ACI containers node  network'
+  - name: 'Set MTU for the ACI containers network'
     command:
-      cmd: "openstack network set {{ os_aci_containers_network }} --mtu {{ neutron_network_mtu }}"
+      cmd: "openstack network set {{ os_aci_containers_network }} --mtu {{ aci_cni['network_interfaces']['opflex']['mtu'] }}"
     when: os_networking_type == "CiscoACI"
 
   - name: 'Set dns nameserver'
