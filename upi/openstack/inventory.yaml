@@ -34,6 +34,7 @@ all:
       # 3 is the minimum number for a fully-functional cluster.
       os_compute_nodes_number: 3
       aci_cni:
+        kubeconfig: /path/to/kubeconfig
         acc_provision_tar: /home/noiro/openupi/aci_deployment.yaml.tar.gz
         network_interfaces:
           node:
