@@ -73,6 +73,7 @@ all:
       aci_containers_subnet_pool: subpool-openshiftupi
       aci_containers_prefix_length: 27
       aci_cni:
+        kubeconfig: /path/to/kubeconfig
         acc_provision_tar: /home/noiro/openupi/aci_deployment.yaml.tar.gz
         network_interfaces:
           node:
