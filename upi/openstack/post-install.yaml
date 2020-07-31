@@ -17,3 +17,13 @@
       force: yes
       wait: no
       definition: "{{ lookup('file', 'files/ingresscontroller_internal_loadbalancer.yaml') }}"
+  - name: 'Create snat policy file'
+    template:
+      src: cluster_snat_policy.conf.j2
+      dest: cluster_snatpolicy.yaml
+
+  - name: 'Create cluster SNAT policy'
+    k8s:
+      state: present
+      kubeconfig: "{{ aci_cni['kubeconfig'] }}"
+      src: cluster_snatpolicy.yaml
