@@ -170,3 +170,8 @@
     command:
       cmd: "openstack floating ip set --port {{ os_port_ingress }} {{ os_ingress_fip }}"
     when: os_ingress_fip is defined and os_ingress_fip|length>0
+
+  - name: 'Set MTU for the node network'
+    command:
+      cmd: "openstack networrk set {{ os_network }} --mtu {{ aci_cni['network_interfaces']['opflex']['mtu'] }}"
+    when: os_networking_type == "CiscoACI"
