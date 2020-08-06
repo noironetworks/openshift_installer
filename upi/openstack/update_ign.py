@@ -62,23 +62,12 @@ if 'mtu' not in inventory['network_interfaces']['opflex']:
 else:
     neutron_network_mtu = str(inventory['network_interfaces']['opflex']['mtu'])
 
-# Returns the mask value for a subnet, for example 10.0.0.0/24 returns 24
-def get_prefix_from_subnet(subnet):
-    mask = None
-    try:
-        split_subnet = subnet.split("/")
-        mask = split_subnet[1]
-    except:
-        print("os_subnet_range not in valid format i.e a.b.c.d/e")
-    return mask
-
 # Set infra_vlan field in inventory.yaml using accprovision tar value
 try:
     with open(original_inventory, 'r') as stream:
         cur_yaml = yaml.safe_load(stream)
         cur_yaml['all']['hosts']['localhost']['aci_cni']['infra_vlan'] = aci_infra_vlan
         cur_yaml['all']['hosts']['localhost']['aci_cni']['service_vlan'] = service_vlan
-        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['subnet_prefix_length'] = get_prefix_from_subnet(os_subnet_range)
         cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['mtu'] = neutron_network_mtu
 
     if cur_yaml:
