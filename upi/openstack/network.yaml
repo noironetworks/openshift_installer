@@ -41,7 +41,7 @@
 
   - name: 'Create a subnet'
     command:
-      cmd: "openstack subnet create --network {{ os_network }}  --subnet-pool node_network_subnet_pool --subnet-range {{ os_subnet_range }} --allocation-pool start={{ os_subnet_range | next_nth_usable(10) }},end={{ os_subnet_range | ipaddr('last_usable') }} --dhcp {{ os_subnet }} --prefix-length {{ aci_cni['network_interfaces']['node']['subnet_prefix_length'] }}"
+      cmd: "openstack subnet create --network {{ os_network }}  --subnet-pool node_network_subnet_pool --subnet-range {{ os_subnet_range }} --allocation-pool start={{ os_subnet_range | next_nth_usable(10) }},end={{ os_subnet_range | ipaddr('last_usable') }} --dhcp {{ os_subnet }}"
     when: os_networking_type == "CiscoACI"
 
   - name: 'Set tags on  primary cluster subnet'
