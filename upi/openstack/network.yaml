@@ -55,6 +55,10 @@
       - (cluster_network.stdout == "" ) or
         (app_profile_name is defined and app_profile_name != aci_cni['app_profile']) or
         (node_epg is defined and node_epg != aci_cni['node_epg'])
+  - name: 'Create the cluster network with aci-containers-nodes EPG contract relationship for node network'
+    command:
+      cmd: "neutron net-create {{ os_network }} --apic:epg_contract_masters list=true type=dict app_profile_name={{ aci_cni['app_profile'] }},name={{ aci_cni['node_epg'] }}"
+    when: os_networking_type == "CiscoACI"
 
   - name: 'Set tags on the  primary cluster network'
     ansible.builtin.command:
