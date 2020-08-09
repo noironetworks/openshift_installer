@@ -35,6 +35,8 @@ all:
       os_compute_nodes_number: 3
       aci_cni:
         kubeconfig: /path/to/kubeconfig
+        app_profile: app-profile
+        node_epg: net_123
         acc_provision_tar: /home/noiro/openupi/aci_deployment.yaml.tar.gz
         network_interfaces:
           node:
