@@ -48,6 +48,7 @@ try:
     json_data = json.loads(data)
     aci_infra_vlan = json_data['aci-infra-vlan']
     service_vlan = json_data['service-vlan']
+    app_profile = json_data['app-profile']
 except:
     print("Couldn't extract host-agent-config from aci-containers ConfigMap")
 
@@ -66,6 +67,7 @@ else:
 try:
     with open(original_inventory, 'r') as stream:
         cur_yaml = yaml.safe_load(stream)
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['app_profile'] = app_profile
         cur_yaml['all']['hosts']['localhost']['aci_cni']['infra_vlan'] = aci_infra_vlan
         cur_yaml['all']['hosts']['localhost']['aci_cni']['service_vlan'] = service_vlan
         cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['mtu'] = neutron_network_mtu
