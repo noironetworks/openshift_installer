@@ -42,13 +42,22 @@ for filename in os.listdir(extract_to):
                 data = yaml.safe_load(stream)['data']['host-agent-config']
             except yaml.YAMLError as exc:
                 print(exc)
+        with open(filepath, 'r') as stream:
+            try:
+                data_controller = yaml.safe_load(stream)['data']['controller-config']
+            except yaml.YAMLError as exc:
+                print(exc)
 
 # Extract host-agent-config and obtain vlan values
 try:
-    json_data = json.loads(data)
-    aci_infra_vlan = json_data['aci-infra-vlan']
-    service_vlan = json_data['service-vlan']
-    app_profile = json_data['app-profile']
+    host_agent_data = json.loads(data)
+    aci_infra_vlan = host_agent_data['aci-infra-vlan']
+    service_vlan = host_agent_data['service-vlan']
+    app_profile = host_agent_data['app-profile']
+
+    controller_data = json.loads(data_controller)
+    aci_vrf_dn = controller_data['aci-vrf-dn']
+    aci_nodebd_dn = controller_data['aci-nodebd-dn']
 except:
     print("Couldn't extract host-agent-config from aci-containers ConfigMap")
 
@@ -71,6 +80,8 @@ try:
         cur_yaml['all']['hosts']['localhost']['aci_cni']['infra_vlan'] = aci_infra_vlan
         cur_yaml['all']['hosts']['localhost']['aci_cni']['service_vlan'] = service_vlan
         cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['mtu'] = neutron_network_mtu
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['vrf'] = aci_vrf_dn
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['bd'] = aci_nodebd_dn
 
     if cur_yaml:
         with open(processed_inventory,'w') as yamlfile:
