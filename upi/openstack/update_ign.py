@@ -2,7 +2,6 @@ import base64
 import json
 import os
 import shutil
-<<<<<<< HEAD
 import tarfile
 import yaml
 from jinja2 import Environment, FileSystemLoader
@@ -16,13 +15,6 @@ import yaml
 #According to the number of the worker count, create the JSON files, and add hostname/network-scripts.
 
 # Read inventory.yaml for CiscoACI CNI variable
-original_inventory = processed_inventory = "inventory.yaml"
-with open(original_inventory, 'r') as stream:
-<<<<<<< HEAD
-    try:
-        localhost = yaml.safe_load(stream)['all']['hosts']['localhost']
-        inventory = localhost['aci_cni']
-# Read inventory.yaml for CiscoACI CNI variables
 with open("inventory.yaml", 'r') as stream:
     try:
         localhost = yaml.safe_load(stream)['all']['hosts']['localhost']
@@ -124,10 +116,14 @@ try:
 
 # Extract host-agent-config and obtain vlan values
 try:
-    json_data = json.loads(data)
-    aci_infra_vlan = json_data['aci-infra-vlan']
-    service_vlan = json_data['service-vlan']
-    app_profile = json_data['app-profile']
+    host_agent_data = json.loads(data)
+    aci_infra_vlan = host_agent_data['aci-infra-vlan']
+    service_vlan = host_agent_data['service-vlan']
+    app_profile = host_agent_data['app-profile']
+
+    controller_data = json.loads(data_controller)
+    aci_vrf_dn = controller_data['aci-vrf-dn']
+    aci_nodebd_dn = controller_data['aci-nodebd-dn']
 except:
     print("Couldn't extract host-agent-config from aci-containers ConfigMap")
 
@@ -150,6 +146,8 @@ try:
         cur_yaml['all']['hosts']['localhost']['aci_cni']['infra_vlan'] = aci_infra_vlan
         cur_yaml['all']['hosts']['localhost']['aci_cni']['service_vlan'] = service_vlan
         cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['mtu'] = neutron_network_mtu
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['vrf'] = aci_vrf_dn
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['bd'] = aci_nodebd_dn
 
     if cur_yaml:
         with open(processed_inventory,'w') as yamlfile:
