@@ -1,11 +1,12 @@
 all:
   hosts:
     localhost:
+<<<<<<< HEAD
       ansible_connection: local
       ansible_python_interpreter: "{{ansible_playbook_python}}"
 
       # User-provided values
-      os_subnet_range: '15.11.0.0/24'
+      os_subnet_range: '15.11.0.0/27'
       os_flavor_master: 'aci_rhel_huge'
       os_flavor_worker: 'aci_rhel_huge'
       os_image_rhcos: 'rhcos-4.4'
@@ -73,18 +74,20 @@ all:
       aci_containers_subnet_pool: subpool-openshiftupi
       aci_containers_prefix_length: 27
       aci_cni:
-        kubeconfig: /path/to/kubeconfig
-        app_profile: app-profile
-        node_epg: net_123
-        acc_provision_tar: /home/noiro/openupi/aci_deployment.yaml.tar.gz
+        # app_profile, infra_vlan, service_vlan, node network bd and vrf fields are derived from acc_provision_tar file
+        # opflex network mtu is set to 1500 if not provided
+        acc_provision_tar: /home/noiro/openupi/aci_deployment.yaml1.tar.gz
+        app_profile: aci-containers-openupi # OPTIONAL
+        cluster_snat_policy_ip: </32>
+        infra_vlan: 4093 # OPTIONAL
+        kubeconfig: /home/noiro/openupi/openshift-env/upi/auth/kubeconfig
         network_interfaces:
           node:
+            bd: uni/tn-prj_<openstack-project-id>/BD-aci-containers-<system-id>-node-bd # OPTIONAL
             name: ens3
-            vrf: uni/tn-common/ctx-sauto_l3out-1_vrf
-            # no default MTU setting for node network
-          opflex: 
+            vrf: uni/tn-<vrf-tenant>/ctx-<vrf-name> # OPTIONAL
+          opflex:
+            mtu: '1500' # OPTIONAL
             name: ens4
-            subnet: '16.11.0.0/24'
-            mtu: 1500
-        cluster_snat_policy_ip: </32>
-        # generated
+            subnet: 16.11.0.0/24
+        service_vlan: 1033 # OPTIONAL
