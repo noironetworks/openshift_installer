@@ -18,7 +18,7 @@
 
   - name: 'Create the cluster network with aci-containers-nodes EPG contract relationship for node network'
     command:
-      cmd: "neutron net-create {{ os_network }} --apic:epg_contract_masters list=true type=dict app_profile_name={{ aci_cni['app_profile'] }},name={{ aci_cni['node_epg'] }} --apic:distinguished_names type=dict BridgeDomain={{ aci_cni['network_interfaces']['node']['bd']"
+      cmd: "neutron net-create {{ os_network }} --apic:epg_contract_masters list=true type=dict app_profile_name={{ aci_cni['app_profile'] }},name={{ aci_cni['node_epg'] }} --apic:distinguished_names type=dict BridgeDomain={{ aci_cni['network_interfaces']['node']['bd'] }}"
     when: os_networking_type == "CiscoACI"
 
   - name: 'Set tags on the  primary cluster network'
