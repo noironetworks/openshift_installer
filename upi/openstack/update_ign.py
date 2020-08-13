@@ -5,8 +5,6 @@ import shutil
 import tarfile
 import yaml
 from jinja2 import Environment, FileSystemLoader
-import tarfile
-import yaml
 
 
 #The script does the following things:
@@ -260,6 +258,69 @@ infra_vlan = str(aci_infra_vlan)
 infra_id = os.environ.get('INFRA_ID', 'openshift').encode()
 
 def update(hostname,ignition):
+
+    config_data = {}
+
+    ifcfg_ens3 = ("""TYPE=Ethernet
+    DEVICE=""" + node_interface + """
+    ONBOOT=yes
+    BOOTPROTO=dhcp
+    DEFROUTE=yes
+    PROXY_METHOD=none
+    BROWSER_ONLY=no
+    MTU=""" + neutron_network_mtu + """
+    IPV4_FAILURE_FATAL=no
+    IPV6INIT=no""").encode()
+
+    ifcfg_ens3_b64 = base64.standard_b64encode(ifcfg_ens3).decode().strip()
+
+    config_data['ifcfg_ens3'] = {'base64': ifcfg_ens3_b64, 'path': '/etc/sysconfig/network-scripts/ifcfg-ens3'}
+
+    ifcfg_ens4 = ("""TYPE=Ethernet
+    DEVICE=""" + opflex_interface + """
+    ONBOOT=yes
+    BOOTPROTO=dhcp
+    DEFROUTE=no
+    PROXY_METHOD=none
+    BROWSER_ONLY=no
+    MTU=""" + neutron_network_mtu + """
+    IPV4_FAILURE_FATAL=no
+    IPV6INIT=no""").encode()
+
+    ifcfg_ens4_b64 = base64.standard_b64encode(ifcfg_ens4).decode().strip()
+
+    config_data['ifcfg_ens4'] = {'base64': ifcfg_ens4_b64, 'path': '/etc/sysconfig/network-scripts/ifcfg-ens4'}
+
+    opflex_conn = ("""VLAN=yes
+    TYPE=Vlan
+    PHYSDEV=""" + opflex_interface + """
+    VLAN_ID=""" + infra_vlan + """
+    REORDER_HDR=yes
+    GVRP=no
+    MVRP=no
+    PROXY_METHOD=none
+    BROWSER_ONLY=no
+    BOOTPROTO=dhcp
+    DEFROUTE=no
+    IPV4_FAILURE_FATAL=no
+    IPV6INIT=no
+    NAME=opflex-conn
+    DEVICE=""" + opflex_interface + """.""" + infra_vlan + """
+    ONBOOT=yes
+    MTU=""" + neutron_network_mtu).encode()
+
+    ifcfg_opflex_conn_b64 = base64.standard_b64encode(opflex_conn).decode().strip()
+
+    config_data['ifcfg_opflex_conn'] = {'base64': ifcfg_opflex_conn_b64, 'path': '/etc/sysconfig/network-scripts/ifcfg-opflex-conn'}
+
+    route_opflex_conn = """ADDRESS0=224.0.0.0
+    NETMASK0=240.0.0.0
+    METRIC0=1000""".encode()
+
+    route_opflex_conn_b64 = base64.standard_b64encode(route_opflex_conn).decode().strip()
+
+    config_data['route_opflex_conn'] = {'base64': route_opflex_conn_b64, 'path': '/etc/sysconfig/network-scripts/route-opflex-conn'}
+
     files = ignition['storage'].get('files', [])
     if 'bootstrap' in hostname.decode():
         ca_cert_path = os.environ.get('OS_CACERT', '')
@@ -278,6 +339,39 @@ def update(hostname,ignition):
                     },
                     'filesystem': 'root',
                 })
+
+        # Add master and worker network scripts to bootstrap ignition
+        env = Environment(loader = FileSystemLoader('./templates'), trim_blocks=True, lstrip_blocks=True)
+        template_worker = env.get_template('99_worker-networkscripts.yaml')
+        rendered_worker = template_worker.render(config_data)
+        worker_b64 = base64.standard_b64encode(rendered_worker).decode().strip()
+
+        template_master = env.get_template('99_master-networkscripts.yaml')
+        rendered_master = template_master.render(config_data)
+        master_b64 = base64.standard_b64encode(rendered_master).decode().strip()
+
+        files.append(
+            {
+               'path': '/opt/openshift/openshift/99_master-networkscripts.yaml',
+               'mode': 420,
+               'contents': {
+                   'source': 'data:text/plain;charset=utf-8;base64,' + master_b64,
+                   'verification': {}
+               },
+               'filesystem': 'root',
+            })
+
+        files.append(
+            {
+               'path': '/opt/openshift/openshift/99_worker-networkscripts.yaml',
+               'mode': 420,
+               'contents': {
+                   'source': 'data:text/plain;charset=utf-8;base64,' + worker_b64,
+                   'verification': {}
+               },
+               'filesystem': 'root',
+            })
+
         for element in files:
             if element["path"] == "/opt/openshift/openshift/99_openshift-cluster-api_worker-machineset-0.yaml":
                 ys_data = yaml.safe_load(base64.standard_b64decode(element["contents"]["source"].replace
@@ -400,97 +494,46 @@ def update(hostname,ignition):
             },
             'filesystem': 'root',
         })
-    ifcfg_ens3 = ("""TYPE=Ethernet
-    DEVICE=""" + node_interface + """
-    ONBOOT=yes
-    BOOTPROTO=dhcp
-    DEFROUTE=yes
-    PROXY_METHOD=none
-    BROWSER_ONLY=no
-    MTU=""" + neutron_network_mtu + """
-    IPV4_FAILURE_FATAL=no
-    IPV6INIT=no""").encode()
-
-    ifcfg_ens3_b64 = base64.standard_b64encode(ifcfg_ens3).decode().strip()
 
     files.append(
         {
-            'path': '/etc/sysconfig/network-scripts/ifcfg-ens3',
+            'path': config_data['ifcfg_ens3']['path'],
             'mode': 420,
             'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + ifcfg_ens3_b64,
+                'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_ens3']['base64'],
                 'verification': {}
             },
             'filesystem': 'root',
         })
 
-    ifcfg_ens4 = ("""TYPE=Ethernet
-    DEVICE=""" + opflex_interface + """
-    ONBOOT=yes
-    BOOTPROTO=dhcp
-    DEFROUTE=no
-    PROXY_METHOD=none
-    BROWSER_ONLY=no
-    MTU=""" + neutron_network_mtu + """
-    IPV4_FAILURE_FATAL=no
-    IPV6INIT=no""").encode()
-
-    ifcfg_ens4_b64 = base64.standard_b64encode(ifcfg_ens4).decode().strip()
-
     files.append(
         {
-            'path': '/etc/sysconfig/network-scripts/ifcfg-ens4',
+            'path': config_data['ifcfg_ens4']['path'],
             'mode': 420,
             'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + ifcfg_ens4_b64,
+                'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_ens4']['base64'],
                 'verification': {}
             },
             'filesystem': 'root',
         })
 
-    opflex_conn = ("""VLAN=yes
-    TYPE=Vlan
-    PHYSDEV=""" + opflex_interface + """
-    VLAN_ID=""" + infra_vlan + """
-    REORDER_HDR=yes
-    GVRP=no
-    MVRP=no
-    PROXY_METHOD=none
-    BROWSER_ONLY=no
-    BOOTPROTO=dhcp
-    DEFROUTE=no
-    IPV4_FAILURE_FATAL=no
-    IPV6INIT=no
-    NAME=opflex-conn
-    DEVICE=""" + opflex_interface + """.""" + infra_vlan + """
-    ONBOOT=yes
-    MTU=""" + neutron_network_mtu).encode()
-
-    opflex_conn_b64 = base64.standard_b64encode(opflex_conn).decode().strip()
-
     files.append(
         {
-            'path': '/etc/sysconfig/network-scripts/ifcfg-opflex-conn',
+            'path': config_data['ifcfg_opflex_conn']['path'],
             'mode': 420,
             'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + opflex_conn_b64,
+                'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_opflex_conn']['base64'],
                 'verification': {}
             },
             'filesystem': 'root',
         })
 
-    route_opflex_conn = """ADDRESS0=224.0.0.0
-    NETMASK0=240.0.0.0
-    METRIC0=1000""".encode()
-
-    route_opflex_conn_b64 = base64.standard_b64encode(route_opflex_conn).decode().strip()
-
     files.append(
         {
-            'path': '/etc/sysconfig/network-scripts/route-opflex-conn',
+            'path': config_data['route_opflex_conn']['path'],
             'mode': 420,
             'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + route_opflex_conn_b64,
+                'source': 'data:text/plain;charset=utf-8;base64,' + config_data['route_opflex_conn']['base64'],
                 'verification': {}
             },
             'filesystem': 'root',
