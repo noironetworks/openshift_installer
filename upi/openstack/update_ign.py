@@ -136,12 +136,18 @@ if 'mtu' not in inventory['network_interfaces']['opflex']:
 else:
     neutron_network_mtu = str(inventory['network_interfaces']['opflex']['mtu'])
 
+if 'node_epg' not in inventory:
+    node_epg = "aci-containers-nodes"
+else:
+    node_epg = inventory['node_epg']
+
 # Set infra_vlan field in inventory.yaml using accprovision tar value
 try:
     with open(original_inventory, 'r') as stream:
         cur_yaml = yaml.safe_load(stream)
         cur_yaml['all']['hosts']['localhost']['aci_cni']['app_profile'] = app_profile
         cur_yaml['all']['hosts']['localhost']['aci_cni']['infra_vlan'] = aci_infra_vlan
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['node_epg'] = node_epg
         cur_yaml['all']['hosts']['localhost']['aci_cni']['service_vlan'] = service_vlan
         cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['mtu'] = neutron_network_mtu
         cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['vrf'] = aci_vrf_dn
