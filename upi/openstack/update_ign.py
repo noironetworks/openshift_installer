@@ -145,13 +145,41 @@ else:
 try:
     with open(original_inventory, 'r') as stream:
         cur_yaml = yaml.safe_load(stream)
-        cur_yaml['all']['hosts']['localhost']['aci_cni']['app_profile'] = app_profile
-        cur_yaml['all']['hosts']['localhost']['aci_cni']['infra_vlan'] = aci_infra_vlan
-        cur_yaml['all']['hosts']['localhost']['aci_cni']['node_epg'] = node_epg
-        cur_yaml['all']['hosts']['localhost']['aci_cni']['service_vlan'] = service_vlan
-        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['mtu'] = neutron_network_mtu
-        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['vrf'] = aci_vrf_dn
-        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['bd'] = aci_nodebd_dn
+
+    cur_yaml['all']['hosts']['localhost']['aci_cni']['app_profile'] = app_profile
+    cur_yaml['all']['hosts']['localhost']['aci_cni']['infra_vlan'] = aci_infra_vlan
+
+    if 'node_epg' not in inventory:
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['node_epg'] = "aci-containers-nodes"
+
+    cur_yaml['all']['hosts']['localhost']['aci_cni']['service_vlan'] = service_vlan
+
+    if 'network_interfaces' not in inventory:
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces'] = dict()
+
+    if 'opflex' not in cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']:
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex'] = dict()
+
+    if 'node' not in cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']:
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node'] = dict()
+
+    if 'mtu' not in cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']:
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['mtu'] = 1500
+
+    if 'mtu' not in cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']:
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['mtu'] = 1500
+
+    if 'name' not in cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']:
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['name'] = 'ens4'
+
+    if 'name' not in cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']:
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['name'] = 'ens3'
+
+    if 'subnet' not in cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']:
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['subnet'] = '192.168.208.0/20'
+
+    cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['vrf'] = aci_vrf_dn
+    cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['bd'] = aci_nodebd_dn
 
     if cur_yaml:
         with open(processed_inventory,'w') as yamlfile:
@@ -262,6 +290,7 @@ except:
 
 infra_vlan = str(aci_infra_vlan)
 infra_id = os.environ.get('INFRA_ID', 'openshift').encode()
+neutron_network_mtu = str(cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['mtu'])
 
 def update(hostname,ignition):
 
