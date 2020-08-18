@@ -89,17 +89,18 @@ all:
         # opflex network mtu is set to 1500 if not provided
         acc_provision_tar: /home/noiro/openupi/aci_deployment.yaml1.tar.gz
         app_profile: aci-containers-openupi # OPTIONAL
-        node_epg: aci-containers-nodes
+        node_epg: aci-containers-nodes # OPTIONAL
         cluster_snat_policy_ip: </32>
         infra_vlan: 4093 # OPTIONAL
         kubeconfig: /home/noiro/openupi/openshift-env/upi/auth/kubeconfig
         network_interfaces:
           node:
             bd: uni/tn-prj_<openstack-project-id>/BD-aci-containers-<system-id>-node-bd # OPTIONAL
-            name: ens3
+            name: ens3 # OPTIONAL
             vrf: uni/tn-<vrf-tenant>/ctx-<vrf-name> # OPTIONAL
+            mtu: 1500 # OPTIONAL
           opflex:
-            mtu: '1500' # OPTIONAL
-            name: ens4
-            subnet: 16.11.0.0/24
+            mtu: 1500 # OPTIONAL
+            name: ens4 # OPTIONAL
+            subnet: 192.168.0.0/16 # OPTIONAL
         service_vlan: 1033 # OPTIONAL
