@@ -1,0 +1,29 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: worker
+  name: 02-worker-mco-check-disable
+spec:
+  config:
+    ignition:
+      config: {}
+      security:
+        tls: {}
+      timeouts: {}
+      version: 2.2.0
+    networkd: {}
+    passwd: {}
+    storage: {}
+    systemd:
+      units:
+      - contents: |
+          [Unit]
+          Description=Disabling Machine-Config Validation Check
+          [Service]
+          Type=simple
+          ExecStart=sh -c "while true; do sudo touch /run/machine-config-daemon-force; sleep 1; done"
+          [Install]
+          WantedBy=multi-user.target
+        enabled: true
+        name: machine-config-daemon-force.service
