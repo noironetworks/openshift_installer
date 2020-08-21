@@ -385,6 +385,10 @@ def update(hostname,ignition):
         rendered_master = template_master.render(config_data)
         master_b64 = base64.standard_b64encode(rendered_master).decode().strip()
 
+        with open('./files/99_worker-disable-mco-validation-check.yaml', 'r') as f:
+            mc_config = f.read().encode()
+            mc_config_b64 = base64.standard_b64encode(mc_config).decode().strip()
+
         files.append(
             {
                'path': '/opt/openshift/openshift/99_master-networkscripts.yaml',
@@ -405,6 +409,17 @@ def update(hostname,ignition):
                    'verification': {}
                },
                'filesystem': 'root',
+            })
+
+        files.append(
+            {
+                'path': '/opt/openshift/openshift/99_worker-disable-mco-validation-check.yaml',
+                'mode': 420,
+                'contents': {
+                    'source': 'data:text/plain;charset=utf-8;base64,' + mc_config_b64,
+                    'verification': {}
+                },
+                'filesystem': 'root',
             })
 
         for element in files:
