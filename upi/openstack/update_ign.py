@@ -612,6 +612,25 @@ os.system('cat > ' + infra_id.decode() + '''-bootstrap-ignition.json << EOL
     },
     "version": "3.1.0"
   }
+os.system('''cat > $INFRA_ID-bootstrap-ignition.json << EOL
+{
+  "ignition": {
+    "config": {
+      "append": [
+        {
+          "source": "$(swift stat -v | grep StorageURL | awk -F': ' '{print$2}')/bootstrap/bootstrap.ign",
+          "verification": {}
+        }
+      ]
+    },
+    "security": {},
+    "timeouts": {},
+    "version": "2.2.0"
+  },
+  "networkd": {},
+  "passwd": {},
+  "storage": {},
+  "systemd": {}
 }
 EOL''')
 
