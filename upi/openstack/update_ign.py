@@ -344,6 +344,28 @@ ignition = update(bootstrap_hostname,ignition)
 with open('bootstrap.ign', 'w') as f:
     json.dump(ignition, f)
 
+os.system('''cat > $INFRA_ID-bootstrap-ignition.json << EOL
+{
+  "ignition": {
+    "config": {
+      "append": [
+        {
+          "source": "$(swift stat -v | grep StorageURL | awk -F': ' '{print$2}')/bootstrap/bootstrap.ign",
+          "verification": {}
+        }
+      ]
+    },
+    "security": {},
+    "timeouts": {},
+    "version": "2.2.0"
+  },
+  "networkd": {},
+  "passwd": {},
+  "storage": {},
+  "systemd": {}
+}
+EOL''')
+
 for index in range(0,master_count):
     master_hostname = infra_id + b'-master-' + str(index).encode() + b'\n'
     with open('master.ign', 'r') as f:
