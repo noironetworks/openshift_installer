@@ -122,7 +122,7 @@ func deleteRunner(deleteFuncName string, dFunction deleteFunc, opts *clientconfi
 func populateDeleteFuncs(funcs map[string]deleteFunc) {
 	funcs["deleteServers"] = deleteServers
 	funcs["deleteTrunks"] = deleteTrunks
-	funcs["deleteLoadBalancers"] = deleteLoadBalancers
+	// funcs["deleteLoadBalancers"] = deleteLoadBalancers
 	funcs["deletePorts"] = deletePorts
 	funcs["deleteSecurityGroups"] = deleteSecurityGroups
 	funcs["deleteRouters"] = deleteRouters

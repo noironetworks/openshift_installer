@@ -17,6 +17,24 @@ variable "external_network" {
   default     = ""
 }
 
+variable "aci_net_ext" {
+ description = "Network extensions fields for APIC"
+ type = "map"
+ default = {}
+}
+
+variable "neutron_cidr" {
+ description = "Neutron CIDR"
+ type = string
+ default = ""
+}
+
+variable "neutron_cidr_end" {
+ description = "Neutron CIDR End"
+ type = number
+ default = 11
+}
+
 variable "external_network_id" {
   description = "UUID of the external network providing Floating IP addresses."
   type        = string

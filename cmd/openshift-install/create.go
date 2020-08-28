@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+        "os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -153,6 +154,7 @@ func newCreateCmd() *cobra.Command {
 }
 
 func runTargetCmd(targets ...asset.WritableAsset) func(cmd *cobra.Command, args []string) {
+
 	runner := func(directory string) error {
 		assetStore, err := assetstore.NewStore(directory)
 		if err != nil {
@@ -252,7 +254,7 @@ func waitForBootstrapComplete(ctx context.Context, config *rest.Config, director
 
 	discovery := client.Discovery()
 
-	apiTimeout := 30 * time.Minute
+	apiTimeout := 120 * time.Minute
 	logrus.Infof("Waiting up to %v for the Kubernetes API at %s...", apiTimeout, config.Host)
 	apiContext, cancel := context.WithTimeout(ctx, apiTimeout)
 	defer cancel()
@@ -293,7 +295,7 @@ func waitForBootstrapComplete(ctx context.Context, config *rest.Config, director
 // and waits for the bootstrap configmap to report that bootstrapping has
 // completed.
 func waitForBootstrapConfigMap(ctx context.Context, client *kubernetes.Clientset) error {
-	timeout := 30 * time.Minute
+	timeout := 120 * time.Minute
 	logrus.Infof("Waiting up to %v for bootstrapping to complete...", timeout)
 
 	waitCtx, cancel := context.WithTimeout(ctx, timeout)
@@ -331,7 +333,7 @@ func waitForBootstrapConfigMap(ctx context.Context, client *kubernetes.Clientset
 // waitForInitializedCluster watches the ClusterVersion waiting for confirmation
 // that the cluster has been initialized.
 func waitForInitializedCluster(ctx context.Context, config *rest.Config) error {
-	timeout := 30 * time.Minute
+	timeout := 120 * time.Minute
 
 	// Wait longer for baremetal, due to length of time it takes to boot
 	if assetStore, err := assetstore.NewStore(rootOpts.dir); err == nil {
@@ -409,7 +411,7 @@ func waitForConsole(ctx context.Context, config *rest.Config, directory string) 
 		return "", errors.Wrap(err, "creating a route client")
 	}
 
-	consoleRouteTimeout := 10 * time.Minute
+	consoleRouteTimeout := 40 * time.Minute
 	logrus.Infof("Waiting up to %v for the openshift-console route to be created...", consoleRouteTimeout)
 	consoleRouteContext, cancel := context.WithTimeout(ctx, consoleRouteTimeout)
 	defer cancel()
@@ -460,6 +462,8 @@ func logComplete(directory, consoleURL string) error {
 		return err
 	}
 	kubeconfig := filepath.Join(absDir, "auth", "kubeconfig")
+	aciPostInstallSteps(kubeconfig)
+
 	pwFile := filepath.Join(absDir, "auth", "kubeadmin-password")
 	pw, err := ioutil.ReadFile(pwFile)
 	if err != nil {
@@ -487,4 +491,68 @@ func waitForInstallComplete(ctx context.Context, config *rest.Config, directory 
 	}
 
 	return logComplete(rootOpts.dir, consoleURL)
+}
+
+func aciPostInstallSteps(kubeconfigpath string) {
+
+	logForSnatPolicy(kubeconfigpath)
+
+	var versionString = "oc --kubeconfig=" + kubeconfigpath + " version"
+
+	var certString = "oc --kubeconfig=" + kubeconfigpath + " get csr -ojson | jq -r '.items[] | select(.status == {} ) | .metadata.name' | xargs oc --kubeconfig=" + kubeconfigpath + " adm certificate approve"
+
+	var restartString = "oc --kubeconfig=" + kubeconfigpath + " get pods -n aci-containers-system | grep 'aci-containers-controller' | awk '{print $1}' | xargs oc --kubeconfig=" + kubeconfigpath + " delete pod -n aci-containers-system"
+
+	var exposeString = `oc --kubeconfig=` + kubeconfigpath + ` replace --force --wait --filename - <<EOF
+apiVersion: operator.openshift.io/v1
+kind: IngressController
+metadata:
+  namespace: openshift-ingress-operator
+  name: default
+spec:
+  endpointPublishingStrategy:
+    type: LoadBalancerService
+    loadBalancer:
+      scope: Internal
+EOF
+`
+
+        logrus.Info("Post installer processing: Approving pending CSRs, restarting aci-containers-controller pod and updating default IngressController...")
+	_, err := exec.Command("sh", "-c", versionString).Output()
+	if err != nil {
+		logrus.Warn("oc binary not found in PATH. Please install oc binary and run the following post-processing commands:")
+		logrus.Warn(certString)
+		logrus.Warn(restartString)
+		logrus.Warn(exposeString)
+		return
+	}
+        _, err = exec.Command("sh", "-c", certString).Output()
+        if err != nil {
+                logrus.Warnf("Unable to approve CSRs: " + err.Error())
+        } else {
+        	logrus.Info("Approved pending CSRs")
+	}
+
+        _, err = exec.Command("sh", "-c", restartString).Output()
+        if err != nil {
+                logrus.Warnf("Unable to restart ACI CNI controller: " + err.Error())
+        } else {
+        	logrus.Info("Restarted aci-containers-controller")
+	}
+
+        _, err = exec.Command("sh", "-c", exposeString).Output()
+        if err != nil {
+                logrus.Warnf("Unable to expose the openshift-ingress service: " + err.Error())
+	} else {
+        	logrus.Info("Updated default IngressController publish strategy to use LoadBalancerService type")
+	}
+}
+
+func logForSnatPolicy(kubeconfigpath string) {
+	ocCmdOutput, _ := exec.Command("sh", "-c", "oc --kubeconfig=" + kubeconfigpath + " get snatpolicy installerclusterdefault").Output()
+	ocCmdOutputString := string(ocCmdOutput)
+	if !strings.Contains(ocCmdOutputString, "not found") {
+		logrus.Info("A cluster level snatpolicy called installerclusterdefault has been applied.")
+		logrus.Infof("If required, delete it by running 'oc --kubeconfig=%s delete snatpolicy installerclusterdefault'", kubeconfigpath)
+	}
 }

@@ -6,10 +6,13 @@ import (
 
 	igntypes "github.com/coreos/ignition/config/v2_2/types"
 	"github.com/pkg/errors"
+        "github.com/sirupsen/logrus"
 
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/tls"
+	ign "github.com/openshift/installer/pkg/asset/ignition"
+
 )
 
 const (
@@ -39,6 +42,17 @@ func (a *Master) Generate(dependencies asset.Parents) error {
 	dependencies.Get(installConfig, rootCA)
 
 	a.Config = pointerIgnitionConfig(installConfig.Config, rootCA.Cert(), "master")
+
+	logrus.Debug("Editing Master.........")
+
+	ignitionFiles := ign.IgnitionFiles(installConfig, false)
+	for _, ignFile := range ignitionFiles {
+			a.Config.Storage.Files = append(a.Config.Storage.Files, ignFile)
+	}
+	systemdUnits := ign.SystemdUnitFiles(installConfig, false)
+	for _, unit := range systemdUnits {
+		a.Config.Systemd.Units = append(a.Config.Systemd.Units, unit)
+	}
 
 	data, err := json.Marshal(a.Config)
 	if err != nil {
