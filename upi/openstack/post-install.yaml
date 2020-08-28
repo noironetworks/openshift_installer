@@ -27,3 +27,6 @@
       state: present
       kubeconfig: "{{ aci_cni['kubeconfig'] }}"
       src: cluster_snatpolicy.yaml
+  - name: 'Replace cluster endpoint stratergy to Loadbalancer'
+    command:
+      cmd: "oc replace --force --wait -f files/cluster_endpoint_strategy.json"
