@@ -1,7 +1,6 @@
 all:
   hosts:
     localhost:
-<<<<<<< HEAD
       ansible_connection: local
       ansible_python_interpreter: "{{ansible_playbook_python}}"
 
@@ -18,7 +17,7 @@ all:
       svc_subnet_range: '172.30.0.0/16'
       os_svc_network_range: '172.30.0.0/15'
       # Subnet pool prefixes
-      cluster_network_cidrs: '15.128.0.0/14'
+      cluster_network_cidrs: '15.128.0.0/16'
       # Subnet pool prefix length
       host_prefix: '23'
       # Name of the SDN.
@@ -116,6 +115,7 @@ all:
         app_profile: aci-containers-openupi # OPTIONAL
         node_epg: aci-containers-nodes # OPTIONAL
         cluster_snat_policy_ip: </32>
+        dns_ip: 172.28.184.18 # OPTIONAL
         infra_vlan: 4093 # OPTIONAL
         kubeconfig: /home/noiro/openupi/openshift-env/upi/auth/kubeconfig
         network_interfaces:
