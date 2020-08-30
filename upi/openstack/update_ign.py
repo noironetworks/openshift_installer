@@ -379,11 +379,11 @@ def update(hostname,ignition):
         env = Environment(loader = FileSystemLoader('./templates'), trim_blocks=True, lstrip_blocks=True)
         template_worker = env.get_template('99_worker-networkscripts.yaml')
         rendered_worker = template_worker.render(config_data)
-        worker_b64 = base64.standard_b64encode(rendered_worker).decode().strip()
+        worker_b64 = base64.standard_b64encode(rendered_worker.encode()).decode().strip()
 
         template_master = env.get_template('99_master-networkscripts.yaml')
         rendered_master = template_master.render(config_data)
-        master_b64 = base64.standard_b64encode(rendered_master).decode().strip()
+        master_b64 = base64.standard_b64encode(rendered_master.encode()).decode().strip()
 
         with open('./files/99_worker-disable-mco-validation-check.yaml', 'r') as f:
             mc_config = f.read().encode()
@@ -613,6 +613,7 @@ os.system('cat > ' + infra_id.decode() + '''-bootstrap-ignition.json << EOL
     "version": "3.1.0"
   }
 os.system('''cat > $INFRA_ID-bootstrap-ignition.json << EOL
+=======
 {
   "ignition": {
     "config": {
