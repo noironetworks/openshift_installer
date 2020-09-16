@@ -136,4 +136,5 @@
       cmd: "openstack subnet set --dns-nameserver {{ aci_cni['dns_ip'] }} {{ os_aci_containers_subnet }}"
     when:
       - os_networking_type == "CiscoACI"
-      - aci_cni['dns_ip'] is defined
+      - aci_cni.dns_ips is defined and aci_cni.dns_ips | length > 0
+    with_items: "{{ aci_cni.dns_ips }}"
