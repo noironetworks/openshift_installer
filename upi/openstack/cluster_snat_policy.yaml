@@ -6,5 +6,5 @@
     k8s:
       state: present
       kubeconfig: "{{ aci_cni['kubeconfig'] }}"
-      defintion: "{{ lookup('template', 'cluster_snat_policy.conf.j2') }}"
+      definition: "{{ lookup('template', 'cluster_snat_policy.conf.j2') }}"
 
