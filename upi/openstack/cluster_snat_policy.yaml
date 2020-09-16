@@ -1,14 +1,10 @@
 - hosts: all
   gather_facts: no
-
   tasks:
-  - name: 'Create snat policy file'
-    template:
-      src: cluster_snat_policy.conf.j2
-      dest: cluster_snatpolicy.yaml
 
   - name: 'Create cluster SNAT policy'
     k8s:
       state: present
       kubeconfig: "{{ aci_cni['kubeconfig'] }}"
-      src: cluster_snatpolicy.yaml
+      defintion: "{{ lookup('template', 'cluster_snat_policy.conf.j2') }}"
+
