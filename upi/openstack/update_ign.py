@@ -211,11 +211,11 @@ def update(hostname,ignition):
         # Add master and worker network scripts to bootstrap ignition
         env = Environment(loader = FileSystemLoader('./templates'), trim_blocks=True, lstrip_blocks=True)
         template_worker = env.get_template('99_worker-networkscripts.yaml')
-        rendered_worker = template_worker.render(config_data)
+        rendered_worker = template_worker.render(config_data).encode()
         worker_b64 = base64.standard_b64encode(rendered_worker).decode().strip()
 
         template_master = env.get_template('99_master-networkscripts.yaml')
-        rendered_master = template_master.render(config_data)
+        rendered_master = template_master.render(config_data).encode()
         master_b64 = base64.standard_b64encode(rendered_master).decode().strip()
 
         with open('./files/99_worker-disable-mco-validation-check.yaml', 'r') as f:
@@ -276,7 +276,7 @@ def update(hostname,ignition):
 
                 ys_data['spec']['template']['spec']['providerSpec']['value']['networks'] = networks
                 element["contents"]["source"] = "data:text/plain;charset=utf-8;base64," + \
-                                                base64.standard_b64encode(yaml.safe_dump(ys_data)).decode().strip()
+                                                base64.standard_b64encode(yaml.safe_dump(ys_data).encode()).decode().strip()
     hostname_b64 = base64.standard_b64encode(hostname).decode().strip()
     files.append(
         {
