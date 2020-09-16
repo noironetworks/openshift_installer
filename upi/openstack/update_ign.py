@@ -26,8 +26,6 @@ try:
     os_subnet_range = localhost['os_subnet_range']
 except:
     print("inventory.yaml should have acc_provision_tar and os_subnet_range fields")
-except:
-    print("inventory.yaml should have acc_provision_tar and os_subnet_range fields")
 
 # Read acc-provision for vlan values
 extract_to = './accProvisionTar'
@@ -422,6 +420,7 @@ def update(hostname,ignition):
                 'filesystem': 'root',
             })
 
+<<<<<<< HEAD
         for element in files:
             if element["path"] == "/opt/openshift/openshift/99_openshift-cluster-api_worker-machineset-0.yaml":
                 ys_data = yaml.safe_load(base64.standard_b64decode(element["contents"]["source"].replace
@@ -613,7 +612,6 @@ os.system('cat > ' + infra_id.decode() + '''-bootstrap-ignition.json << EOL
     "version": "3.1.0"
   }
 os.system('''cat > $INFRA_ID-bootstrap-ignition.json << EOL
-=======
 {
   "ignition": {
     "config": {
