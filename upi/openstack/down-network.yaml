@@ -84,6 +84,7 @@
   - name: 'List the cluster address-scope'
     command:
       cmd: "openstack address scope list --name node_network_address_scope"
+<<<<<<< HEAD
     when: os_networking_type == "CiscoACI"
     register: cisco_cluster_address_scope
 
