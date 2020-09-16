@@ -255,28 +255,6 @@ def update(hostname,ignition):
                 'filesystem': 'root',
             })
 
-        for element in files:
-            if element["path"] == "/opt/openshift/openshift/99_openshift-cluster-api_worker-machineset-0.yaml":
-                ys_data = yaml.safe_load(base64.standard_b64decode(element["contents"]["source"].replace
-                                                                   ("data:text/plain;charset=utf-8;base64,", '')))
-                networks = ys_data['spec']['template']['spec']['providerSpec']['value'].get('networks', [])
-                networks.append(
-                    {
-                        'filter': {},
-                        'subnets': [
-                            {
-                                'filter': {
-                                    'name': str(infra_id.decode() + '-aci-containers-nodes'),
-                                    'tags': str('openshiftClusterID=' + infra_id.decode())
-                                }
-                            }
-                        ]
-                    }
-                )
-
-                ys_data['spec']['template']['spec']['providerSpec']['value']['networks'] = networks
-                element["contents"]["source"] = "data:text/plain;charset=utf-8;base64," + \
-                                                base64.standard_b64encode(yaml.safe_dump(ys_data).encode()).decode().strip()
     hostname_b64 = base64.standard_b64encode(hostname).decode().strip()
     files.append(
         {
