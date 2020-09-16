@@ -101,7 +101,7 @@ all:
             name: ens4 # Optional
             subnet: 192.168.208.0/20 # Optional
         cluster_snat_policy_ip: <IP> # Optional, no default value
-        dns_ip: <IP> # Optional, no default value
+        dns_ips: [<list of dns ip's>] # Optional, no default value
         # The following are derived from acc_provision_tar file
         # and populated after running the update_ign.py
         app_profile: aci-containers-<system-id> # Derived
