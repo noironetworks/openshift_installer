@@ -25,6 +25,10 @@
     command:
       cmd: "openstack network set --tag {{ primary_cluster_network_tag }} --tag {{ cluster_id_tag }} {{ os_network }}"
 
+  - name: 'Set the primaryClusterNetwork tag'
+    command:
+      cmd: "openstack network set --tag {{ os_network }} {{ os_network }}"
+
   - name: 'Create a subnet'
     os_subnet:
       name: "{{ os_subnet }}"
