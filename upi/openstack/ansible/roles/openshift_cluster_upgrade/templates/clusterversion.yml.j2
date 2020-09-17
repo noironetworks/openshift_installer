@@ -1,0 +1,12 @@
+apiVersion: config.openshift.io/v1
+kind: ClusterVersion
+metadata:
+  name: version
+spec:
+{% if target_channel is defined %}
+    channel: "{{ target_channel }}"
+{% elif target_version is defined %}
+    desiredUpdate:
+      force: false
+      version: "{{ target_version }}"
+{% endif %}

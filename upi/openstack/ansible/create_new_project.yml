@@ -1,0 +1,35 @@
+---
+#
+# USAGE:
+# ansible-playbook create_new_project.yml -i ../ocp-de1-inventory -i ../ocp-de1-inventory-creds -i ../prod-env-inventory -e "new_project_projectname=ci-zz-fabien new_project_projectadmin=fba8fe@redacted.com new_project_costcenter=420142 new_project_projectsize=10" --ask-vault-pass
+#
+
+- name: add bastion host to inventory
+  hosts: controllernode
+  gather_facts: yes
+  become: false
+
+  tasks:
+    - include_role:
+        name: add_bastion_host
+
+- name: Login ACI
+  hosts: bastion
+  become: False
+  gather_facts: no
+  tasks:
+    - import_role:
+        name: aci_login
+      when: openshift_use_cisco_aci_cni is not defined or (openshift_use_cisco_aci_cni | bool) == True
+
+- name: add a new project to OCP cluster
+  hosts: bastion
+  gather_facts: yes
+  become: false
+
+  tasks:
+    - set_fact:
+        postinstall_kubeconfig: "{{ ansible_user_dir }}/openshift-{{ clustername }}/auth/kubeconfig"
+
+    - include_role:
+        name: create_new_project

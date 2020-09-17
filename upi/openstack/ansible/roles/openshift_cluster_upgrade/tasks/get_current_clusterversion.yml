@@ -1,0 +1,22 @@
+- include_vars: json_queries.yml
+
+- include_vars: json_queries.yml
+
+- name: get clusterversion
+  uri:
+    url: "{{ openshift_public_api_url }}/apis/config.openshift.io/v1/clusterversions/version"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ cluster_upgrade_oauth_token }}"
+    status_code: [200,401,404,500,503]
+    return_content: yes
+    validate_certs: no
+  register: current_clusterversion_result
+  retries: 100
+  delay: 2
+  until: current_clusterversion_result.content | length > 0
+  ignore_errors: yes
+
+- set_fact:
+    current_clusetrversion_last_update_version: "{{ current_clusterversion_result.content | from_json | json_query(jq_version) }}"
+    current_clusetrversion_last_update_state: "{{ current_clusterversion_result.content | from_json | json_query(jq_state) }}"

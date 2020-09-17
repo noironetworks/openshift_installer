@@ -1,0 +1,25 @@
+# the equivalent in the UI would be:
+# 1. switch to new channel (for 4.2.x -> 4.3.x it's fast-4.3)
+# 2. update to respective allowed minor version (e.g. 4.3.1)
+# 3. (optional but highly recommended) switch to a stable channel (e.g. stable-4.3)
+
+- assert:
+    that: cluster_upgrade.minorversion_target is defined and cluster_upgrade.minorversion_upgrade_channel is defined
+    fail_msg: "minor version upgrades require at least to have a target minor version and the upgrade channel defined. a stable channel is highly recommended!"
+
+- name: ensure switch to upgrade channel
+  include_tasks: cluster_upgrade.yml
+  when: cluster_upgrade.minorversion_target is defined
+  vars:
+    target_channel: "{{ cluster_upgrade.minorversion_upgrade_channel }}"
+
+- name: upgrade to target minor version
+  include_tasks: cluster_upgrade.yml
+  vars:
+    target_version: "{{ cluster_upgrade.minorversion_target }}"
+
+- name: ensure switch to target channel
+  include_tasks: cluster_upgrade.yml
+  vars:
+    target_channel: "{{ cluster_upgrade.minorversion_target_channel }}"
+  when: cluster_upgrade.minorversion_target_channel is defined

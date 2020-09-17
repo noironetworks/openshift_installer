@@ -1,0 +1,30 @@
+---
+- name: fetch current routingdomain config
+  k8s_info:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    api_version: aci.snat/v1
+    kind: RdConfig
+    name: routingdomain-config
+    namespace: aci-containers-system
+  register: aci_postinstall_rdconfig
+
+- name: check if usersubnets exist in rdconfig
+  set_fact:
+    aci_rdconfig_usersubnets: "{{ aci_postinstall_rdconfig.resources[0].spec.usersubnets }}"
+  when:
+    - aci_postinstall_rdconfig.resources[0].spec.usersubnets is defined
+
+- name: check if snat subnet is already present in the usersubnet list
+  set_fact:
+    aci_rdconfig_snat_pool_exists: "{{ aci_ext_ip_subnet in aci_rdconfig_usersubnets }}"
+  when: aci_rdconfig_usersubnets is defined
+
+# this setting ensures that calls from pod -> route are not snat-ed
+- name: ensure routingdomain config contains subnet for external IPs to avoid snat for calls from pod to route
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'routingdomain-config.partial.yml.j2') }}"
+  when:
+    - aci_rdconfig_snat_pool_exists == False
+

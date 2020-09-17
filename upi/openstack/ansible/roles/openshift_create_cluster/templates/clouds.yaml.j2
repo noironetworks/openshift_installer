@@ -1,0 +1,13 @@
+clouds:
+  {{ cloud.project.name }}:
+    auth:
+      auth_url: {{ cloud.openstack.endpoint }}
+      username: {{ cloud.user.name }}
+      password: {{ cloud_user_password }}
+      project_name: {{ cloud.project.name }}
+      user_domain_name: {{ cloud.user.domain }}
+      domain_name: {{ cloud.openstack.domain }}
+    cacert: "{{ ansible_user_dir }}/redacted_root_ca.pem"
+    region_name: "regionOne"
+    interface: "public"
+

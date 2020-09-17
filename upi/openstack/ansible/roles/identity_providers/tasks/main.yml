@@ -1,0 +1,6 @@
+
+- name: create fact for identity provider list to be able to add multiple IDPs
+  set_fact:
+    identity_providers_list: "[]"
+
+- import_tasks: oidc.yml

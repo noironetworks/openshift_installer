@@ -1,0 +1,31 @@
+---
+- import_role:
+    name: add_facts_from_controller
+
+- import_tasks: install_packages.yml
+
+- import_tasks: download_openshift_binaries.yml
+
+  #- import_tasks: add_custom_ca.yml
+
+- import_tasks: render_clouds_yaml.yml
+
+- import_tasks: configure_bashrc.yml
+
+- name: ensure the install directory exists
+  file:
+    path: "openshift-{{ openshift.cluster.clustername }}"
+    state: directory
+    mode: "0750"
+
+- name: Copy file with owner and permissions
+  copy:
+    src: "/home/noiro/apoorva/ansible/id_rsa"
+    dest: "/home/ansible_deployer/.ssh/"
+    owner: "ansible_deployer"
+    mode: "0600"
+  ignore_errors: true
+
+  #- import_tasks: release_free_floating_ips.yml
+
+- import_tasks: install_openshift.yml

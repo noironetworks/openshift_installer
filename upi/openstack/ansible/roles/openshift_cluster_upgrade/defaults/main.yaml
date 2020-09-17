@@ -1,0 +1,8 @@
+cluster_upgrade:
+  microversion_channel: stable-4.2
+  microversion_target: 4.2.18
+  minorversion_upgrade_channel: fast-4.3
+  minorversion_target_channel: stable-4.3
+  minorversion_target: 4.3.1
+  retries: 30
+  delay: 180

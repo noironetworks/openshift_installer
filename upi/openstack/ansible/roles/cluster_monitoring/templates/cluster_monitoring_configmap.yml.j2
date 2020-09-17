@@ -1,0 +1,111 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    alertmanagerMain:
+      global:
+        resolve_timeout: 5m
+      route:
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 12h
+        receiver: default
+        routes:
+        - match:
+            alertname: Watchdog
+          repeat_interval: 5m
+          receiver: watchdog
+      receivers:
+      - name: default
+      - name: watchdog
+      nodeSelector:
+        {{ cluster_monitoring.node_selector }}
+      tolerations:
+      - key: {{ cluster_monitoring.tolerations_key }}
+        value: reserved
+        effect: NoSchedule
+      - key: {{ cluster_monitoring.tolerations_key }}
+        value: reserved
+        effect: NoExecute
+    prometheusK8s:
+      volumeClaimTemplate:
+        metadata:
+          name: cinder
+        spec:
+          storageClassName: standard
+          resources:
+            requests:
+              storage: 40Gi
+      retention: 24h
+      nodeSelector:
+        {{ cluster_monitoring.node_selector }}
+      tolerations:
+      - key: {{ cluster_monitoring.tolerations_key }}
+        value: reserved
+        effect: NoSchedule
+      - key: {{ cluster_monitoring.tolerations_key }}
+        value: reserved
+        effect: NoExecute
+    prometheusOperator:
+      nodeSelector:
+        {{ cluster_monitoring.node_selector }}
+      tolerations:
+      - key: {{ cluster_monitoring.tolerations_key }}
+        value: reserved
+        effect: NoSchedule
+      - key: {{ cluster_monitoring.tolerations_key }}
+        value: reserved
+        effect: NoExecute
+    grafana:
+      nodeSelector:
+        {{ cluster_monitoring.node_selector }}
+      tolerations:
+      - key: {{ cluster_monitoring.tolerations_key }}
+        value: reserved
+        effect: NoSchedule
+      - key: {{ cluster_monitoring.tolerations_key }}
+        value: reserved
+        effect: NoExecute
+    k8sPrometheusAdapter:
+      nodeSelector:
+        {{ cluster_monitoring.node_selector }}
+      tolerations:
+      - key: {{ cluster_monitoring.tolerations_key }}
+        value: reserved
+        effect: NoSchedule
+      - key: {{ cluster_monitoring.tolerations_key }}
+        value: reserved
+        effect: NoExecute
+    kubeStateMetrics:
+      nodeSelector:
+        {{ cluster_monitoring.node_selector }}
+      tolerations:
+      - key: {{ cluster_monitoring.tolerations_key }}
+        value: reserved
+        effect: NoSchedule
+      - key: {{ cluster_monitoring.tolerations_key }}
+        value: reserved
+        effect: NoExecute
+    openshiftStateMetrics:
+      nodeSelector:
+        {{ cluster_monitoring.node_selector }}
+      tolerations:
+      - key: {{ cluster_monitoring.tolerations_key }}
+        value: reserved
+        effect: NoSchedule
+      - key: {{ cluster_monitoring.tolerations_key }}
+        value: reserved
+        effect: NoExecute        
+    telemeterClient:
+      nodeSelector:
+        {{ cluster_monitoring.node_selector }}
+      tolerations:
+      - key: {{ cluster_monitoring.tolerations_key }}
+        value: reserved
+        effect: NoSchedule
+      - key: {{ cluster_monitoring.tolerations_key }}
+        value: reserved
+        effect: NoExecute

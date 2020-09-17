@@ -1,0 +1,9 @@
+- name: ensure image registry config is applied
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'image_registry_config_pod_placement.yml.j2') }}"
+
+- name: create secure route for the image registry in order to get access from outside of OCP
+  shell: |
+    oc patch configs.imageregistry.operator.openshift.io/cluster --patch '{"spec":{"defaultRoute":true}}' --type=merge

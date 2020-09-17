@@ -1,0 +1,97 @@
+- name: ensure ingress controller config is applied
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'ingresscontroller_config.yml.j2')}}"
+
+- name: ensure configmap for redacted-ca-chain exists
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: "{{ ingress_controller.redactedca_cert.configmapname }}"
+        namespace: openshift-config
+      data:
+        ca-bundle.crt: |
+          {{ ingress_controller.redacted_ca_chain }}
+  when: ingress_controller.redactedca_cert.enable
+
+- name: ensure that redacted-ca is set in cluster-wide proxy configuration
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    merge_type: merge
+    state: present
+    definition:
+      apiVersion: config.openshift.io/v1
+      kind: Proxy
+      metadata:
+        name: cluster
+      spec:
+        trustedCA:
+          name: "{{ ingress_controller.redactedca_cert.configmapname }}"
+  when: ingress_controller.redactedca_cert.enable
+
+- name: ensure secret which contains the ingress certificate for apps payload exists
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'tls-apps-secret.yml.j2')}}"
+  when: ingress_controller.apps_cert.enable
+
+- name: ensure TLS Certificate is used by the ingress controller
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    merge_type: merge
+    state: present
+    definition:
+      apiVersion: operator.openshift.io/v1
+      kind: IngressController
+      metadata:
+        name: default
+        namespace: openshift-ingress-operator
+      spec:
+        defaultCertificate:
+          name: "{{ ingress_controller.apps_cert.secretname }}"
+  when: ingress_controller.apps_cert.enable
+
+- name: ensure secret for api certificate exists
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'tls-api-secret.yml.j2')}}"
+  when: ingress_controller.api_cert.enable
+
+- name: ensure the API tls certificate is used
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    merge_type: merge
+    state: present
+    definition:
+      apiVersion: config.openshift.io/v1
+      kind: APIServer
+      metadata:
+        name: cluster
+      spec:
+        servingCerts:
+          namedCertificates:
+          - names:
+            - "{{ ingress_controller.api_cert.hostname }}"
+            servingCertificate:
+              name: "{{ ingress_controller.api_cert.secretname }}"
+  when: ingress_controller.api_cert.enable
+
+- name: update kubeconfig if the redacted-ca is not present
+  blockinfile:
+    state: present
+    backup: yes
+    path: "{{ postinstall_kubeconfig }}"
+    insertafter: 'clusters:'
+    block: |
+      - cluster:
+          certificate-authority-data: {{ ingress_controller_vault.api_tls_cert | b64encode }}
+          server: https://{{ ingress_controller.api_cert.hostname}}:6443
+        name: {{ ingress_controller.api_cert.hostname}}:6443
+  when: ingress_controller.api_cert.enable

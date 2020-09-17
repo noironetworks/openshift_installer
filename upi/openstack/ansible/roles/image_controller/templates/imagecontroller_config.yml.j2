@@ -1,0 +1,21 @@
+apiVersion: config.openshift.io/v1
+kind: Image
+metadata:
+  name: cluster
+spec:
+  allowedRegistriesForImport:
+    - domainName: quay.io
+      insecure: false
+    - domainName: registry.redhat.io
+      insecure: false
+    - domainName: '*.docker.io'
+      insecure: false
+    - domainName: '*.redhat.com'
+      insecure: false
+  registrySources:
+    allowedRegistries:
+    - quay.io
+    - registry.redhat.io
+    - '*.docker.io'
+    - '*.redhat.com'
+  

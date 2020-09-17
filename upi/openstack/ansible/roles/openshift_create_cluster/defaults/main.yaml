@@ -1,0 +1,54 @@
+## defaults for playbook
+
+# whether or not to use the Cisco ACI CNI plugin
+openshift_use_cisco_aci_cni: True
+
+# openshift_user_password: ##stored in vault
+cloud:
+  openstack:
+    ## keystone URL
+    endpoint: http://172.28.184.65:5000/v3
+    #
+    domain: default
+  user:
+    name: admin
+    domain: default
+    pubkey: /home/noiro/.ssh/id_rsa.pub
+  project:
+    name: openupi
+    domain: default
+    jumphost_flavor: m1.medium
+    jumphost_image_name: centos-8-raw
+    ext_network: sauto_l3out-2
+    dnsserver: 172.28.184.18
+    rhcos_image_name: rhcos-4.4
+    # flavor_name: m1.large
+    ## Subnet which is created for Jumphost
+    subnet: 172.15.0
+openshift:
+  cluster:
+    openshiftVersion: 4.4
+    clustername: janinecluster
+    basedomain: noiro1.local
+    workerflavor: aci_ocp
+    workercount: 2
+    masterflavor: aci_ocp
+    mastercount: 3
+    # apifloatingip: 192.168.2.100
+    # pullsecret: '< pull secret available from redhat >'
+
+openstack_project:
+    auth_url: http://172.28.184.65:5000//v3
+    username: admin
+    password: noir0123
+    project_name: openupi
+ansible_ctrl_node_dir: ./ctrl_dir
+proxy: http://proxy.esl.cisco.com:80
+cloud_user_password: noir0123
+openshift_release_free_fips: True
+openshift_fip_api_description: "OpenShift API"
+openshift_fip_ingress_description: "OpenShift Ingress"
+ansible_user_dir: /home
+openshift_installation_method: "UPI"
+ansible_distribution: CentOS
+ansible_distribution_major_version: CentOS8

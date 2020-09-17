@@ -1,0 +1,15 @@
+# cluster_monitoring:
+#   node_selector: String, must not be empty
+#   tolerations_key: the key specified in the node taint
+
+cluster_monitoring:
+  node_selector: 'node-role.kubernetes.io/infra: ""'
+  tolerations_key: infra
+
+kubeview:
+  namespace: 'ci-ops-view'
+  serviceaccountname: 'kube-ops-view-stable-kube-ops-view'
+  clusterrolename: 'kube-ops-view-stable-kube-ops-view'
+  clusterrolebindingname: 'kube-ops-view-stable-kube-ops-view'
+  servicename: 'kube-ops-view-stable-kube-ops-view'
+  deploymentname: 'kube-ops-view-stable-kube-ops-view'

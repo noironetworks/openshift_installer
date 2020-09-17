@@ -1,0 +1,79 @@
+---
+- name: add bastion host to inventory
+  hosts: controllernode
+  gather_facts: yes
+  become: false
+  tags: always
+  tasks:
+    - include_role:
+        name: add_bastion_host
+
+- name: post-installation
+  hosts: bastion
+  gather_facts: true
+  tasks:
+    - set_fact:
+        postinstall_kubeconfig: "{{ ansible_user_dir }}/openshift-{{ clustername }}/auth/kubeconfig"
+      tags: always
+    - import_role:
+        name: add_facts_from_controller
+      tags: always
+
+    - import_role:
+        name: add_storageclass
+      tags: add_storageclass
+
+    - import_role:
+        name: openshift_aci_configuration
+      tags: aci_postinstall
+      when: openshift_use_cisco_aci_cni is not defined or (openshift_use_cisco_aci_cni | bool) == True
+
+    - import_role:
+        name: identity_providers
+      tags: identity_providers
+
+    - import_role:
+        name: cluster_admins
+      tags: cluster_admins
+
+    - import_role:
+        name: machinesets
+      tags: machinesets
+
+    - import_role:
+        name: cluster_logging
+      tags: cluster_logging
+
+    - import_role:
+        name: ingress_controller
+      tags: ingress_controller
+
+    - import_role:
+        name: cluster_monitoring
+      tags: cluster_monitoring
+        
+    - import_role:
+        name: image_registry        
+      tags: image_registry
+      
+    - import_role:
+        name: image_streams_and_templates
+      tags: image_streams_and_templates   
+
+    - import_role:
+        name: disable_project_self_provisioning
+      tags: disable_project_self_provisioning
+      
+    - import_role:
+        name: scheduler_policy
+      tags: scheduler_policy
+
+    - import_role:
+        name: disable_insights
+      tags: disable_insights
+
+    - import_role:
+        name: image_controller
+      tags: image_controller
+
+...

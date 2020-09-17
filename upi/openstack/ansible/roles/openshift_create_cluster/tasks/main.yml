@@ -1,0 +1,4 @@
+---
+- name: "openshift {{ action }}"
+  include_tasks: '{{ action }}.yml'
+

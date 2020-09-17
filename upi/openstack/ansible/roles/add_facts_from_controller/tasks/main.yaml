@@ -1,0 +1,9 @@
+---
+- name: get some facts from ansible control node
+  set_fact:
+    osp_project_id_run: "{{ hostvars['localhost']['osp_project_id_run'] }}"
+    os_token: "{{ hostvars['localhost']['os_token'] }}"
+    osp_rados_gw: "{{ hostvars['localhost']['osp_rados_gw'] }}"
+    osp_swift_endpoint: "{{ hostvars['localhost']['osp_swift_endpoint'] }}"
+    osp_image_endpoint: "{{ hostvars['localhost']['osp_image_endpoint'] }}"
+    osp_neutron_endpoint: "{{ hostvars['localhost']['osp_neutron_endpoint'] }}"

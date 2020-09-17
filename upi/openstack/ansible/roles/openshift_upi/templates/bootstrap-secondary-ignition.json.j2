@@ -1,0 +1,30 @@
+{
+  "ignition": {
+    "config": {
+      "append": [{
+        "source": "{{ osp_image_endpoint }}{{ osp_bootstrap_image_result.image.file }}", 
+        "verification": {},
+        "httpHeaders": [{
+          "name": "X-Auth-Token", 
+          "value": "{{ os_token }}" 
+        }]
+      }]
+    },
+    "security": {
+      "tls": {
+        "certificateAuthorities": [
+          {
+            "source": "data:text/plain;charset=utf-8;base64,{{ openstack_ca_chain | b64encode }}",
+            "verification": {}
+          }
+        ]
+      }
+    },
+    "timeouts": {},
+    "version": "2.4.0"
+  },
+  "networkd": {},
+  "passwd": {},
+  "storage": {},
+  "systemd": {}
+}

@@ -1,0 +1,12 @@
+clouds:
+  openstack:
+    auth:
+      auth_url: http://172.28.184.65:5000/v3
+      username: "admin"
+      password: "noir0123"
+      project_id: 3c4ac34308d54f9da65b66fc287f588b
+      project_name: "openupi"
+      user_domain_name: "Default"
+    region_name: "regionOne"
+    interface: "public"
+    identity_api_version: 3

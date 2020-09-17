@@ -1,0 +1,53 @@
+- name: Add unwanted image streams and templates to examples operator skipped/black list
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'example_operator_config.yml.j2') }}"
+
+- name: Delete skipped imagestreams
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}" 
+    name: "{{ item }}"
+    namespace: openshift
+    kind: ImageStream
+    api_version: image.openshift.io/v1
+    state: absent
+  loop: "{{ samples_operator.skipped_imagestreams }}"
+
+- name: Delete skipped templates
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}" 
+    name: "{{ item }}"
+    namespace: openshift
+    kind: Template
+    api_version: template.openshift.io/v1
+    state: absent
+  loop: "{{ samples_operator.skipped_templates }}"
+
+- name: Import image streams
+  shell: oc --config={{ postinstall_kubeconfig }} import-image {{ redactedimagestream.name }} --from={{ redactedimagestream.source_registry_repo }} --confirm --all --request-timeout="5m" --reference-policy='local' -n openshift    
+  register: oc_result
+  until: oc_result is not failed
+  retries: 5
+  loop: "{{ redacted_image_streams }}"
+  loop_control:
+    loop_var: redactedimagestream 
+    
+- name: Tag redacted image streams
+  shell: |
+    oc --config={{ postinstall_kubeconfig }} tag --reference-policy='local' openshift/{{ redactedimagestream.name }}:latest openshift/{{ redactedimagestream.name }}:quality -n openshift
+    oc --config={{ postinstall_kubeconfig }} tag --reference-policy='local' openshift/{{ redactedimagestream.name }}:quality openshift/{{ redactedimagestream.name }}:production -n openshift
+  loop: "{{ redacted_image_streams }}"
+  loop_control:
+    loop_var: redactedimagestream
+    
+- name: Apply redacted templates 
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('file', redactedtemplate.file) }}"
+  loop: "{{ redacted_templates }}"
+  loop_control:
+    loop_var: redactedtemplate  
+    
+    

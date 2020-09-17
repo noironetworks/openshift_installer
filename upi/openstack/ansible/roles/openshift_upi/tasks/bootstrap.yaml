@@ -1,0 +1,39 @@
+- import_tasks: common.yaml
+
+- name: 'Create the bootstrap server port'
+  os_port:
+    name: "{{ os_port_bootstrap }}"
+    network: "{{ os_network }}"
+    security_groups:
+    - "{{ os_sg_master }}"
+    allowed_address_pairs:
+    - ip_address: "{{ os_subnet_range | next_nth_usable(5) }}"
+    - ip_address: "{{ os_subnet_range | next_nth_usable(6) }}"
+
+- name: 'Set bootstrap port tag'
+  command:
+    cmd: "openstack port set --tag {{ cluster_id_tag }} {{ os_port_bootstrap }}"
+
+- name: get content of bootstrap ignition file
+  slurp:
+    src: "{{ ansible_user_dir }}/openshift-{{ clustername }}/{{ os_bootstrap_ignition }}"
+  register: bootstrap_ignition_slurp
+
+- name: 'Create the bootstrap server'
+  os_server:
+    name: "{{ os_bootstrap_server_name }}"
+    image: "{{ os_image_rhcos }}"
+    flavor: "{{ os_flavor_master }}"
+    userdata: "{{ bootstrap_ignition_slurp['content'] | b64decode | string }}"
+    auto_ip: no
+    #boot_from_volume: True
+    #terminate_volume: True
+    #    volume_size: 40
+    nics:
+    - port-name: "{{ os_port_bootstrap }}"
+
+- name: 'Create the bootstrap floating IP'
+  os_floating_ip:
+    state: present
+    network: "{{ os_external_network }}"
+    server: "{{ os_bootstrap_server_name }}"

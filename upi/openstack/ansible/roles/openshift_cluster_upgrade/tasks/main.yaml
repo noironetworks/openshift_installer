@@ -1,0 +1,3 @@
+# first do microversion upgrades
+- include_tasks: microversion_upgrade.yml
+- include_tasks: minorversion_upgrade.yml

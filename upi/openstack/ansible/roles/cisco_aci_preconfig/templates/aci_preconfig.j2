@@ -1,0 +1,63 @@
+#
+# Configuration for ACI Fabric
+#
+aci_config:
+  system_id: janinecluster              # Every opflex cluster on the same fabric must have a distict ID
+  tenant:
+    name: prj_3c4ac34308d54f9da65b66fc287f588b
+#  use_legacy_kube_naming_convention: True
+  apic_hosts:                           # List of APIC hosts to connect to for APIC API access
+    - 172.28.184.60
+  apic_login:
+    username: admin
+    password: noir0123
+  vmm_domain:                           # Kubernetes VMM domain configuration
+    encap_type: vxlan # Encap mode: vxlan or vlan
+    mcast_range:                        # Every vxlan VMM on the same fabric must use a distinct range
+        start: 225.126.1.1
+        end: 225.126.255.255
+  # The following resources must already exist on the APIC,
+  # this is a reference to use them
+  aep: sauto_aep                       # The attachment profile for ports/VPCs connected to this cluster
+  vrf:                                  # VRF used to create all subnets used by this Kubernetes cluster
+    name: sauto_l3out-1_vrf          # This should exist, the provisioning tool does not create it
+    tenant: common        # This can be tenant for this cluster (system-id) or common
+  l3out:                                # L3out to use for this kubernetes cluster (in the VRF above)
+    name: sauto_l3out-1              # This is used to provision external service IPs/LB
+    external_networks:
+        - sauto_l3out-1_epg        # This should also exist, the provisioning tool does not create it
+#
+# Networks used by Kubernetes
+#
+net_config:
+  node_subnet: 16.11.0.1/27
+  pod_subnet: 16.128.0.1/16 # Subnet to use for Kubernetes Pods
+  pod_subnet_chunk_size: 24
+  extern_dynamic: 151.12.1.1/24      # Subnet to use for dynamically allocated external services
+  extern_static: 151.13.1.1/21        # Subnet to use for statically allocated external services
+  node_svc_subnet: 15.6.168.1/21          # Subnet to use for service graph
+  kubeapi_vlan: 2032                   # The VLAN used by the internal physdom for nodes
+  service_vlan: 2034                    # The VLAN used for external LoadBalancer services
+  infra_vlan: 3804
+  interface_mtu: 1400
+#
+#
+# Configuration for container registry
+# Update if a custom container registry has been setup
+#
+registry:
+  image_prefix: docker.io/noirolabs
+  # image_pull_secret: noiro-docker-registry-secret      # If you need to specify an image pull secret for custom registry
+  aci_containers_controller_version: jordan-test
+  aci_containers_host_version: jordan-test
+  cnideploy_version: jordan-test
+  opflex_agent_version: jordan-test
+  openvswitch_version: jordan-test
+  aci_containers_operator_version: jordan-test
+#
+# Enable/disable logging for ACI components on kubernetes
+#
+logging:
+  controller_log_level: debug
+  hostagent_log_level: debug
+  opflexagent_log_level: debug

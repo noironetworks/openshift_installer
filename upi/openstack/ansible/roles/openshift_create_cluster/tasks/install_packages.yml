@@ -1,0 +1,105 @@
+---
+
+- include_role:
+    name: configure_yum_repo_proxy
+  vars:
+    repo_names:
+    - "CentOS-Base.repo"
+  when:
+    - ansible_distribution == "CentOS"
+    - ansible_distribution_major_version | int == 7
+
+- include_role:
+    name: configure_yum_repo_proxy
+  vars:
+    repo_names:
+    - "CentOS-Base.repo"
+    - "CentOS-AppStream.repo"
+    - "CentOS-Extras.repo"
+  when:
+    - ansible_distribution == "CentOS"
+    - ansible_distribution_major_version | int == 8
+
+- name: ensure epel repository is configured
+  become: true
+  package:
+    state: present
+    name:
+      - epel-release
+- name: Replace baseurl in epel repo
+  become: true
+  replace:
+    path: /etc/yum.repos.d/epel.repo
+    regexp: 'download\.fedoraproject'
+    replace: 'dl.fedoraproject'
+
+- include_role:
+    name: configure_yum_repo_proxy
+  vars:
+    repo_names:
+      - "epel.repo"
+
+- name: ensure packages are installed
+  become: true
+  package:
+    state: present
+    name:
+      - python2-openshift
+      - bash-completion
+      - bind-utils
+  when:
+    - ansible_distribution == "CentOS"
+    - ansible_distribution_major_version | int == 7
+
+- name: ensure packages are installed
+  become: true
+  package:
+    state: present
+    name:
+      - python3
+      - python3-openshift
+      - bash-completion
+      - jq
+      - bind-utils
+  when:
+    - ansible_distribution == "CentOS"
+    - ansible_distribution_major_version | int == 8
+
+- name: install openstacksdk
+  block:
+  - name: install openstack repo
+    dnf:
+      state: present
+      name: centos-release-openstack-train
+    become: true
+  - name: ensure repos are properly configured for proxy
+    include_role:
+      name: configure_yum_repo_proxy
+    vars:
+      repo_names:
+      - "CentOS-OpenStack-train.repo"
+  - name: disable not needed repos
+    command: "dnf config-manager --set-disabled {{ item }}"
+    become: true
+    args:
+      warn: no
+    loop:
+      - advanced-virtualization
+      - centos-rabbitmq-38
+      - ceph-nautilus
+  - name: install openstack python modules
+    package:
+      name:
+      - python3-openstackclient
+      - python3-openstacksdk
+      state: present
+    become: true
+  when:
+    - ansible_distribution == "CentOS"
+    - ansible_distribution_major_version | int == 8
+
+- name: ensure packages are up to date
+  become: true
+  package:
+    name: "*"
+    state: latest

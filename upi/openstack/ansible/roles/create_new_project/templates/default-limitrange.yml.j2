@@ -1,0 +1,13 @@
+kind: LimitRange
+apiVersion: v1
+metadata:
+  name: default-resource-limits
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: {{ new_project_default_cpu }}
+        memory: {{ new_project_default_ram }}
+      defaultRequest:
+        cpu: {{ new_project_default_request_cpu }}
+        memory: {{ new_project_default_request_ram }}

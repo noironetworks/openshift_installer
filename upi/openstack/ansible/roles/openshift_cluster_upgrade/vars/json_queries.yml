@@ -1,0 +1,2 @@
+jq_state: "status.history[0].state"
+jq_version: "status.history[0].version"

@@ -1,0 +1,2 @@
+scheduler:
+  max_cinder_volumes_per_node: 26

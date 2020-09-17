@@ -1,0 +1,24 @@
+# Required Python packages:
+#
+# ansible
+# openstacksdk
+
+- import_tasks: common.yaml
+
+
+- name: 'Remove the bootstrap server'
+  os_server:
+    name: "{{ os_bootstrap_server_name }}"
+    state: absent
+    delete_fip: yes
+
+- name: 'Remove the bootstrap server port'
+  os_port:
+    name: "{{ os_port_bootstrap }}"
+    state: absent
+
+- name: 'Remove the second bootstrap server port'
+  os_port:
+    name: "{{ os_aci_containers_port_bootstrap }}"
+    state: absent
+  when: os_networking_type == "CiscoACI"

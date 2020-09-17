@@ -1,0 +1,7 @@
+---
+- name: Upload OS images to swift and glance
+  hosts: controllernode
+  gather_facts: no
+  roles:
+    - role: openstack_auth
+    - role: openstack_upload_image

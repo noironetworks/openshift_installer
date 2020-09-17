@@ -1,0 +1,21 @@
+---
+- name: release any free FIPs to ensure to not exceed the quota later
+  block:
+  - name: get all FIPs
+    uri:
+      url: "{{ osp_neutron_endpoint }}/v2.0/floatingips"
+      method: GET
+      status_code: 200
+      headers:
+        X-Auth-Token: "{{ os_token }}"
+    register: osp_free_fips_after_install
+  
+  # we keep the free FIP for API or Ingress to avoid having to change DNS entries
+  - name: release free FIPs except API and Ingress
+    command: "openstack floating ip delete {{ item.id }}"
+    loop: "{{ osp_free_fips_after_install.json.floatingips }}"
+    when:
+    - item.fixed_ip_address is not defined or item.fixed_ip_address is none
+    - item.description != openshift_fip_api_description
+    - item.description != openshift_fip_ingress_description
+  when: openshift_release_free_fips | bool

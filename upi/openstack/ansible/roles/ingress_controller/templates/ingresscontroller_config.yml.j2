@@ -1,0 +1,19 @@
+apiVersion: operator.openshift.io/v1
+kind: IngressController
+metadata:
+  name: default
+  namespace: openshift-ingress-operator
+spec:
+  replicas: 2
+  nodePlacement:
+    nodeSelector:
+      matchLabels:
+        {{ ingress_controller.node_selector }}
+    tolerations:
+    - effect: NoSchedule
+      operator: Exists
+      key: {{ ingress_controller.tolerations_key }}
+    - effect: NoExecute
+      operator: Exists
+      key: {{ ingress_controller.tolerations_key }}      
+    

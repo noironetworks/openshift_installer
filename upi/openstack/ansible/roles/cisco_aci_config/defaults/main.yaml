@@ -1,0 +1,5 @@
+tenant: prj_3c4ac34308d54f9da65b66fc287f588b
+apic_hosts_ip: 172.28.184.60
+clustername: janinecluster
+openshift_pod_subnet: 16.128.0.1/16
+contract_for_apic_api: 

@@ -1,0 +1,13 @@
+- name: check machineset status
+  k8s_info:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    kind: MachineSet
+    namespace: openshift-machine-api
+    api_version: machine.openshift.io/v1beta1
+    name: "{{ machineset_cluster_id }}-{{ machineset.type }}"
+  register: node_status
+  until:
+    (node_status.resources.0.status.readyReplicas|default(0)) == machineset.replicas
+  retries: 100
+  delay: 50
+

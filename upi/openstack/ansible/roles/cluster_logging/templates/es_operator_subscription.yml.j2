@@ -1,0 +1,11 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  generateName: elasticsearch-
+  namespace: '{{ clo_elasticsearch_operator_namespace }}'
+spec:
+  channel: '{{ clo_elasticsearch_operator_channel }}'
+  installPlanApproval: Automatic
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  name: elasticsearch-operator

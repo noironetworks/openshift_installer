@@ -1,0 +1,6 @@
+- name: ensure image controller config is applied to block unwanted registries
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'imagecontroller_config.yml.j2')}}"
+

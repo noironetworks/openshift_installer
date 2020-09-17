@@ -1,0 +1,40 @@
+---
+- name: Load auth environemnt for openstack
+  hosts: controllernode
+  gather_facts: no
+  tags: always
+  roles:
+    - role: openstack_auth
+    - role: add_bastion_host
+
+- name: Configure Bastion and start Boostrapping of the OCP Cluster
+  hosts: "bastion"
+  become: False
+  gather_facts: no
+  environment:
+    OS_NO_CACHE: True
+    COMPUTE_API_VERSION: 1.1
+    OS_USERNAME: "{{ cloud.user.name }}"
+    OS_USER_DOMAIN_NAME: "{{ cloud.user.domain }}"
+    OS_VOLUME_API_VERSION: 3
+    OS_AUTH_URL: "{{ cloud.openstack.endpoint }}"
+    NOVA_VERSION: 1.1
+    OS_IMAGE_API_VERSION: 2
+    OS_PASSWORD: "{{ cloud_user_password }}"
+    OS_PROJECT_DOMAIN_NAME: "{{ cloud.project.domain }}"
+    OS_INTERFACE: public
+    OS_IDENTITY_API_VERSION: 3
+    OS_PROJECT_ID: "{{ osp_project_id | default('') }}"
+    OS_AUTH_TYPE: password
+    OS_CACERT: "{{ ansible_user_dir }}/redacted_root_ca.pem"
+    PYTHONWARNINGS: "ignore:Certificate has no, ignore:A true SSLContext object is not available"
+  tasks:
+    
+    - import_role:
+        name: openshift_upi
+        tasks_from: down
+
+    - name: ensure installation directory is removed
+      file:
+        path: "{{ ansible_user_dir }}/openshift-{{ clustername }}"
+        state: absent

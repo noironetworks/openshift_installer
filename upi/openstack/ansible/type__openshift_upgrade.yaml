@@ -1,0 +1,24 @@
+---
+- name: add bastion host to inventory
+  hosts: controllernode
+  gather_facts: yes
+  become: false
+  
+  tasks:
+    - include_role:
+        name: add_bastion_host
+
+- name: upgrade openshift cluster
+  hosts: bastion
+  gather_facts: true
+
+  tasks:
+    - set_fact:
+        postinstall_kubeconfig: "{{ ansible_user_dir }}/openshift-{{ openshift.cluster.clustername }}/auth/kubeconfig"
+
+    - include_role:
+        name: openshift_cluster_upgrade
+      vars:
+        cluster_upgrade_oauth_token: "{{ robot_sa_token_result }}"
+      
+...

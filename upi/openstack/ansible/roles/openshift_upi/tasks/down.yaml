@@ -1,0 +1,6 @@
+---
+
+- import_tasks: down-controlplane.yaml
+- import_tasks: down-compute-nodes.yaml
+- import_tasks: down-network.yaml
+- import_tasks: down-security-groups.yaml

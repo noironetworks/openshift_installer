@@ -1,0 +1,37 @@
+all:
+  hosts:
+    localhost:
+      aci_cni:
+        acc_provision_tar: /home/noiro/aci_deployment.yaml.tar.gz
+        app_profile: aci-containers-janinecluster
+        dns_ip: 172.28.184.18
+        infra_vlan: 3801
+        kubeconfig: /home/noiro/openshift-janinecluster/auth/kubeconfig
+        network_interfaces:
+          node:
+            bd: uni/tn-prj_3c4ac34308d54f9da65b66fc287f588b/BD-aci-containers-janinecluster-node-bd
+            mtu: 1500
+            name: ens3
+            vrf: uni/tn-common/ctx-sauto_l3out-1_vrf
+          opflex:
+            mtu: 1500
+            name: ens4
+            subnet: 192.168.208.0/20
+        node_epg: aci-containers-nodes
+        service_vlan: 2034
+      ansible_connection: local
+      ansible_python_interpreter: '{{ansible_playbook_python}}'
+      cluster_network_cidrs: 16.128.0.0/16
+      host_prefix: '23'
+      os_api_fip: 60.60.60.140
+      os_compute_nodes_number: 2
+      os_cp_nodes_number: 3
+      os_external_network: sauto_l3out-2
+      os_flavor_master: aci_ocp
+      os_flavor_worker: aci_ocp
+      os_image_rhcos: rhcos-4.4
+      os_ingress_fip: 60.60.60.108
+      os_networking_type: CiscoACI
+      os_subnet_range: 16.11.0.0/27
+      os_svc_network_range: 172.30.0.0/15
+      svc_subnet_range: 172.30.0.0/16

@@ -1,0 +1,8 @@
+---
+- name: ACI | remove intermediate acc provisioning files
+  file:
+    path: "{{ ansible_user_dir}}/{{ item }}"
+    state: absent
+  loop:
+    - "{{ acc_preconfig_manifest_file_name }}"
+    - "{{ acc_provisioning_out_file_name }}"

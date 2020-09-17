@@ -1,0 +1,14 @@
+---
+create_machinesets:
+  - type: logging
+    flavor: r1x4.c16r64
+    replicas: 3
+    rootdisk_size: 160
+  - type: infra
+    flavor: r1x4.c16r64
+    replicas: 3
+    rootdisk_size: 160
+  - type: router
+    flavor: r1x2.c4r8
+    replicas: 2
+    rootdisk_size: 80

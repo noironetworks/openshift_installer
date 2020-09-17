@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: "{{ new_project_projectname }}"
+  annotations:
+    openshift.io/description: "{{ new_project_projectname }}"
+    openshift.io/display-name: "{{ new_project_projectname }}"
+{% if openshift_use_cisco_aci_cni is sameas True or variable is undefined%}
+    opflex.cisco.com/endpoint-group: '{"tenant":"{{ clustername }}","app-profile":"CUSTOMER_ANP","name":"{{ new_project_projectname|upper }}_EPG"}'
+{% endif %}
+  labels:
+    costcenter: "{{ new_project_costcenter }}"
+    hostingtype: "{{ new_project_hostingtype }}"
+    projectsize: "{{ new_project_projectsize }}"

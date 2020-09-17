@@ -1,0 +1,91 @@
+#
+# Configuration for ACI Fabric
+#
+aci_config:
+  system_id: {{ clustername }}              # Every opflex cluster must have a distinct ID
+  #apic-refreshtime: 1200                   # Subscrption refresh-interval in seconds; Max=43200
+  apic_hosts:                               # List of APIC hosts to connect for APIC API
+  - {{ apic_hosts_ip }}
+  vmm_domain:                               # Kubernetes container domain configuration
+    encap_type: vxlan                       # Encap mode: vxlan or vlan
+    mcast_fabric: {{ mcast_fabric }}
+    mcast_range:                            # Every opflex VMM must use a distinct range
+      start: {{ mcast_range_start }}
+      end: {{ mcast_range_end }}
+    nested_inside:                          # Include if nested inside a VMM;
+                                            #   required for CloudFoundry
+                                            #   supported for Kubernetes
+    # type: vmware                          # Specify the VMM vendor (supported: vmware)
+    # name: myvmware                        # Specify the name of the VMM domain
+
+  # The following resources must already exist on the APIC.
+  # They are used, but not created, by the provisioning tool.
+  aep: {{ fabric_aep_group }}           # The AEP for ports/VPCs used by this cluster
+  vrf:                                  # This VRF used to create all kubernetes EPs
+    name: {{ fabric_vrf }}
+    tenant: common                      # This can be system-id or common
+  l3out:
+    name: {{ fabric_l3out }}            # Used to provision external IPs
+    external_networks:
+    - DEFAULT_L3OUT_EPG                 # Used for external contracts
+  #custom_epgs:                         # List of additional endpoint-group names
+  #  - custom_group1                    # to configure for use with annotations
+  #  - custom_group2
+  #isolation_segments:                  # List of names of isolation segments
+  #  - name: iso-seg-1                  # and the subnets to use (CloudFoundry only)
+  #    subnet: 10.11.0.1/24
+  #  - name: iso-seg-2
+  #    subnet: 10.11.1.1/24
+
+#
+# Networks used by ACI containers
+#
+net_config:
+  node_subnet: {{ openshift_node_subnet }}              # Subnet to use for nodes, to control traffic. Where API service is hosted
+  pod_subnet: {{ openshift_pod_subnet }}                # Subnet to use for Kubernetes
+                                                        #   Pods/CloudFoundry containers
+  #vip_subnet: 10.3.0.1/16                              # Subnet to use for virtual IPs
+                                                        #   (CloudFoundry only)
+  extern_dynamic: {{ openshift_ext_dynamic_subnet }}    # Subnet to use for dynamic external IPs, routable to outside
+  extern_static: {{ openshift_ext_static_subnet }}      # Subnet to use for static external IPs
+  node_svc_subnet: {{ openshift_node_svc_subnet }}      # Subnet to use for service graph, internal routing of load-balanced service traffic
+  kubeapi_vlan: {{ openshift_kubeapi_vlan }}            # The VLAN used by the physdom for nodes
+                                                        #   (Kubernetes only)
+  service_vlan: {{ openshift_service_vlan }}             # The VLAN used by LoadBalancer services
+  infra_vlan: 3967                                      # The VLAN used by ACI infra
+  interface_mtu: 1400                                   # min = 1280 for ipv6, max = 8900 for VXLAN
+  #service_monitor_interval: 5                          # IPSLA interval probe time for PBR tracking
+                                                        # default is 5, set to 0 to disable, max: 65535
+  #pbr_tracking_non_snat: true                          # Default is false, set to true for IPSLA to
+                                                        # be effective with non-snat services
+  pod_subnet_chunk_size: 256                            # Define size of hostsubnet. need to match hostPrefix in install-config.yaml
+
+#
+# Configuration for container registry
+# Update if a custom container registry has been setup
+#
+registry:
+  image_prefix : docker.io/noirolabs
+  aci_containers_controller_version : {{ container_control_version }}
+  aci_containers_host_version : {{ container_host_version }}
+  cnideploy_version : {{ cni_deploy_version }}
+  opflex_agent_version : {{ opflex_agent_version }}
+  openvswitch_version : {{ openvswitch_version }}
+  aci_containers_operator_version : {{ container_operator_version }}
+
+#
+#
+
+kube_config:
+  # ovs_memory_limit: "20Gi"            # override if needed, default is "1Gi"
+  # reboot_opflex_with_ovs: "false"     # override if needed, default is "true"
+  image_pull_policy: IfNotPresent
+
+#istio_config:
+  # install_istio: False         # default is True
+  # install_profile: "default"   # override if needed, default is "demo"
+  #
+logging:
+  controller_log_level: debug
+  hostagent_log_level: debug
+  opflexagent_log_level: debug

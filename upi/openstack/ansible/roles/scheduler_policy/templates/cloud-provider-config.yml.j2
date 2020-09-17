@@ -1,0 +1,13 @@
+apiVersion: v1
+data:
+  config: |
+    [Global]
+    secret-name = openstack-credentials
+    secret-namespace = kube-system
+    region = regionOne
+    [BlockStorage]
+    node-volume-attach-limit={{ scheduler.max_cinder_volumes_per_node }}
+kind: ConfigMap
+metadata:
+  name: cloud-provider-config
+  namespace: openshift-config

@@ -1,0 +1,40 @@
+- name: ensure namespace for redacted robot account exists
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ robot_serviceaccount.namespace }}"
+
+- name: ensure robot service account exists
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: "{{ robot_serviceaccount.name }}"
+        namespace: "{{ robot_serviceaccount.namespace }}"
+
+- name: ensure robot service account has proper rolebinding
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition:
+      kind: ClusterRoleBinding
+      apiVersion: rbac.authorization.k8s.io/v1
+      metadata:
+        name: cluster-admin-redacted-robot
+      subjects:
+        - kind: ServiceAccount
+          apiGroup: rbac.authorization.k8s.io
+          name: "{{ robot_serviceaccount.name }}"
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: cluster-admin
+
+- include_tasks: get_oauth_token.yml

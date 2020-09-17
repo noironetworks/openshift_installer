@@ -1,0 +1,18 @@
+- name: wait for cluster logging CRD to be available
+  k8s_info:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: clusterloggings.logging.openshift.io
+  register: cluster_logging_crd
+  until: cluster_logging_crd.resources | length > 0
+  retries: 20
+  delay: 5
+
+# apply: yes -> in case we have changed something. this basically translates to oc apply
+- name: ensure cluster logging CR exists
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    apply: yes
+    definition: "{{ lookup('template', 'clusterlogging.yml.j2') }}"

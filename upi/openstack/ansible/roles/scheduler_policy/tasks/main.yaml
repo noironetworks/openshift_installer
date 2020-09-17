@@ -1,0 +1,25 @@
+- name: ensure scheduler policy exists
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('file', 'files/scheduler-policy.yml') }}"
+
+- name: ensure scheduler is configured to use scheduler policy
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    merge_type: merge
+    definition:
+      kind: Scheduler
+      metadata:
+        name: cluster
+      apiVersion: config.openshift.io/v1
+      spec:
+        mastersSchedulable: false
+        policy:
+          name: "scheduler-policy"
+                
+- name: ensure cloud provider config map exists with block volume limits
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'cloud-provider-config.yml.j2') }}"

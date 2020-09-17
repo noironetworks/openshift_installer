@@ -1,0 +1,23 @@
+- name: get token secret name of serviceaccount
+  k8s_info:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    api_version: v1
+    kind: ServiceAccount
+    name: "{{ robot_serviceaccount.name }}"
+    namespace: "{{ robot_serviceaccount.namespace }}"
+  register: robot_sa_result
+
+- set_fact:
+    robot_sa_secret_name: "{{ robot_sa_result | json_query('resources[*].secrets[*].name') | first | select('match', '.*token.*') | list | first }}"
+
+- name: get token from secret
+  k8s_info:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    api_version: v1
+    kind: Secret
+    name: "{{ robot_sa_secret_name }}"
+    namespace: "{{ robot_serviceaccount.namespace }}"
+  register: robot_sa_token_result
+
+- set_fact:
+    robot_sa_token: "{{ robot_sa_token_result | json_query('resources[0].data.token') | b64decode }}"

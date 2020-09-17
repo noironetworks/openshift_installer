@@ -1,0 +1,22 @@
+---
+# Node selector for all logging components
+clo_node_selector: 'node-role.kubernetes.io/logging: ""'
+
+# ElasticSearch config
+clo_elasticsearch_index_redundancy: "SingleRedundancy"
+clo_elasticsearch_storage_size: 500G
+clo_elasticsearch_storage_class: standard
+clo_elasticsearch_operator_namespace: openshift-operators-redhat
+clo_elasticsearch_operator_channel: "{{ ocp_version }}"
+
+# Cluster Logging operator subscription config
+clo_cluster_logging_namespace: openshift-logging
+clo_cluster_logging_operator_name: cluster-logging
+clo_cluster_logging_operator_namespace: "{{ clo_cluster_logging_namespace }}"
+clo_cluster_logging_operator_channel: "{{ ocp_version }}"
+
+# Curator Config
+clo_curator_delete_index_after_value: 7
+clo_curator_delete_index_after_unit: days
+clo_curator_scheduled_crontab: "0 1 * * *"
+clo_curator_concurrency_policy: "Forbid"

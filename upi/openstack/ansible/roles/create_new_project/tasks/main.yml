@@ -1,0 +1,100 @@
+- name: Add namespace
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'new-namespace.yml.j2')}}"
+
+
+- name: Add resource limits according to the project block size 
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    namespace: "{{ new_project_projectname }}"
+    definition: "{{ lookup('template', 'resource_template_blocksize.yml.j2')}}"
+
+- name: add default container limits 
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    namespace: "{{ new_project_projectname }}"
+    definition: "{{ lookup('template', 'default-limitrange.yml.j2')}}"
+
+
+- name: add admin permission to the projectadmin by default
+  shell: oc policy add-role-to-user admin {{ new_project_projectadmin }} -n {{ new_project_projectname }}
+
+#- name: create a dummy secret
+#  shell: oc secrets new-basicauth dummysecret --username=dummyuser --password=dummypassword -n {{ new_project_projectname }}
+
+- name: add dummy secret allowing a build from SocialCoding
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    namespace: "{{ new_project_projectname }}"
+    definition: "{{ lookup('template', 'dummy-secret.yml.j2')}}"
+
+- name: link the secret to sa builder
+  shell: oc secrets link builder dummysecret -n {{ new_project_projectname }}
+
+
+- name: add secret allowing developers to access rhio-registry
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    namespace: "{{ new_project_projectname }}"
+    definition: "{{ lookup('template', 'secret-for-developers-to-access-rhio-registry.yml.j2')}}"
+
+
+- name: add dialog_deployer if managed hosting
+  shell: oc policy add-role-to-user edit {{ dialog_user }} -n {{ new_project_projectname }}
+  when: new_project_hostingtype == "managed"
+
+- name: create group managedadmins on Openshift Cluster
+  shell: oc adm groups new managedadmins
+  when: new_project_hostingtype == "managed"
+  ignore_errors: yes
+
+- name: add admin group to managed project
+  shell: oc policy add-role-to-group admin managedadmins -n {{ new_project_projectname }}
+  when: new_project_hostingtype == "managed"
+
+- name: add view permission to projectadmin when managed hosting
+  shell: oc policy add-role-to-user view {{ new_project_projectadmin }} -n {{ new_project_projectname }}
+  when: new_project_hostingtype == "managed"
+
+- name: remove admin role for projectadmin when managed hosting
+  shell: oc policy remove-role-from-user admin {{ new_project_projectadmin }} -n {{ new_project_projectname }}
+  when: new_project_hostingtype == "managed"
+
+
+- name: add networkpolicy DenyAll
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    namespace: "{{ new_project_projectname }}"
+    definition: "{{ lookup('template', 'networkpolicies/policyDenyAll.yml.j2')}}"
+
+- name: add networkpolicy AllowOpenshiftIngress
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    namespace: "{{ new_project_projectname }}"
+    definition: "{{ lookup('template', 'networkpolicies/policyAllowOpenshiftIngress.yml.j2')}}"
+
+- name: add networkpolicy AllowOpenshiftMonitoring
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    namespace: "{{ new_project_projectname }}"
+    definition: "{{ lookup('template', 'networkpolicies/policyAllowOpenshiftMonitoring.yml.j2')}}"
+
+- name: add networkpolicy AllowSameNamespace
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    namespace: "{{ new_project_projectname }}"
+    definition: "{{ lookup('template', 'networkpolicies/policyAllowSameNamespace.yml.j2')}}"
+
+- name: create aci EPG per namespace
+  include_tasks: aci_deploy_epg.yml
+  when: openshift_use_cisco_aci_cni is not defined or (openshift_use_cisco_aci_cni | bool) == True

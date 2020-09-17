@@ -1,0 +1,45 @@
+apiVersion: v1
+baseDomain: noiro1.local
+compute:
+- architecture: amd64
+  hyperthreading: Enabled
+  name: worker
+  platform: {}
+  replicas: 0
+controlPlane:
+  architecture: amd64
+  hyperthreading: Enabled
+  name: master
+  platform: {}
+  replicas: 3
+metadata:
+  creationTimestamp: null
+  name: janinecluster
+networking:
+  clusterNetwork:
+  - cidr: 16.128.0.0/14
+    hostPrefix: 23
+  machineNetwork:
+  - cidr: 16.11.0.0/27
+  networkType: CiscoACI
+  serviceNetwork:
+  - 172.31.0.0/16
+platform:
+  openstack:
+    cloud: openupi
+    computeFlavor: aci_rhel_huge
+    externalDNS: ["172.28.184.18"]
+    externalNetwork: sauto_l3out-2
+    lbFloatingIP: 60.60.60.140
+    octaviaSupport: "0"
+    region: ""
+    trunkSupport: "1"
+    clusterOSImage: rhcos-4.4
+proxy:
+  httpsProxy: "http://proxy.esl.cisco.com:80/"
+  httpProxy: "http://proxy.esl.cisco.com:80/"
+  noProxy: "localhost,127.0.0.1,172.28.184.65,172.28.184.60,16.11.0.4,16.11.0.5,16.11.0.6,16.11.0.7,16.11.0.8,16.11.0.9,16.11.0.10,16.11.0.11,16.11.0.12,16.11.0.13,16.11.0.14,16.11.0.15,16.11.0.16,16.11.0.17,16.11.0.18,16.11.0.19,16.11.0.20,16.11.0.21,16.11.0.22,16.11.0.23,16.11.0.24,16.11.0.25,16.11.0.26,16.11.0.27,16.11.0.28,16.11.0.29,16.11.0.30,16.11.0.31,16.11.0.32,16.11.0.33,16.11.0.34,172.30.0.1,172.30.0.10,oauth-openshift.apps.openupi.noiro1.local,console-openshift-console.apps.openupi.noiro1.local,downloads-openshift-console.apps.openupi.noiro1.local,downloads-openshift-console.apps.openupi.noiro1.local,alertmanager-main-openshift-monitoring.apps.openupi.noiro1.local"
+publish: External
+pullSecret: '{"auths":{"cloud.openshift.com":{"auth":"b3BlbnNoaWZ0LXJlbGVhc2UtZGV2K2lyYXRob3JlMXg3aXluY3Y0b2x0c3Z1Z2l1N29wZmR5a3FwOlJETjY1QjVORElQQ1BEUkJPNUlLMkdGV01KNE83MTM2VVMyNERJQjY0MkRWR09NSTU3MTRGSE9PSzFMNFpJVkc=","email":"irathore@cisco.com"},"quay.io":{"auth":"b3BlbnNoaWZ0LXJlbGVhc2UtZGV2K2lyYXRob3JlMXg3aXluY3Y0b2x0c3Z1Z2l1N29wZmR5a3FwOlJETjY1QjVORElQQ1BEUkJPNUlLMkdGV01KNE83MTM2VVMyNERJQjY0MkRWR09NSTU3MTRGSE9PSzFMNFpJVkc=","email":"irathore@cisco.com"},"registry.connect.redhat.com":{"auth":"NTMxNDE1ODR8dWhjLTFYN2l5TkN2NE9MVHN2dWdpdTdvUGZEeWtxUDpleUpoYkdjaU9pSlNVelV4TWlKOS5leUp6ZFdJaU9pSmlOak5rTldSalpqazRZVFUwWlRnME9ESTVOVGN3TkRWbVltSTBaVFEzTUNKOS5sTHBJYXFwTXA1d19qaEFRbGp3WXR0T2tNNjNtMlBNRFM4N21VNTJPMVVTUnBKM1RCbG51QnJ4blhMQWhxVlYyQ19wNVFpRzlDWk52UWFQWlktNko4Z0NEdnhiWmVMa0gyRlh0MTZud0ZXSkRFU0VEQ1VBQWJIR2ZLcjNlU3JCeUZac3VQMDlDdnNJZ2tyU1lfdmQ3MGpCa045M0pmV2I1eWdtaFBIaHpaT2ZnVGowbnB2V3NmNjlCbk5nZlZSdEZtUnlUclFTWVlLM2pCX0NZUEVtSEpRam44MGhRWlJyQkppeU9kT1hhN1R3UHdza29jT1BGOENuclZtRnowaUltSFhTWmVnMEFwOUhPNTZraVVlRDBkVmxhNWtudUlyYk83N01nSVVMd2s3TVNWdlJTd3RIMnJfVy1XWGtoQkduWFoxRDREQXh2LXZfWVE0NVlhRFVzYkRIZGVrZnIybjhfRk4yckJ4UkZNUVNXMGROYlpKaHpadFBxc2dMLVdQM2V1eDJWM2twWHQxcG14Sk5RQTAyUlNMV194bnhEZEVRRFlPWHNhZlRnQjZySE5rWTYzRFA0UzNHWXNlbnlta3Y1VG5YanZWaTZpb2V1TVU2RHpEVjNsYTV6RkxZbWY0cXhiUTJSQkwzY254eEtaY3hmcXlhNFE2NWQwUUVoWEZ1dHRCeGJUM0NvLUR0RGhCZXRLVDJTNm5FZUpRVmlxeWxGVVRxSkJsS2xyaEg4eVhXY3haWFFpeU1kSVBXdjJHWFdITncwTTdlZ1dEQjJrSFUxdmg2enBPV2Q1VkRMcGtybWpCU2JfdkJVcDNWdFBNMHBKMW90VmZXQ1ZOYlpBSHpEVzRkRUc5c2t1dEJvck8wQVEtcjIxdjBTanlYVHppWnZiTDBHdTUxSnRaTQ==","email":"irathore@cisco.com"},"registry.redhat.io":{"auth":"NTMxNDE1ODR8dWhjLTFYN2l5TkN2NE9MVHN2dWdpdTdvUGZEeWtxUDpleUpoYkdjaU9pSlNVelV4TWlKOS5leUp6ZFdJaU9pSmlOak5rTldSalpqazRZVFUwWlRnME9ESTVOVGN3TkRWbVltSTBaVFEzTUNKOS5sTHBJYXFwTXA1d19qaEFRbGp3WXR0T2tNNjNtMlBNRFM4N21VNTJPMVVTUnBKM1RCbG51QnJ4blhMQWhxVlYyQ19wNVFpRzlDWk52UWFQWlktNko4Z0NEdnhiWmVMa0gyRlh0MTZud0ZXSkRFU0VEQ1VBQWJIR2ZLcjNlU3JCeUZac3VQMDlDdnNJZ2tyU1lfdmQ3MGpCa045M0pmV2I1eWdtaFBIaHpaT2ZnVGowbnB2V3NmNjlCbk5nZlZSdEZtUnlUclFTWVlLM2pCX0NZUEVtSEpRam44MGhRWlJyQkppeU9kT1hhN1R3UHdza29jT1BGOENuclZtRnowaUltSFhTWmVnMEFwOUhPNTZraVVlRDBkVmxhNWtudUlyYk83N01nSVVMd2s3TVNWdlJTd3RIMnJfVy1XWGtoQkduWFoxRDREQXh2LXZfWVE0NVlhRFVzYkRIZGVrZnIybjhfRk4yckJ4UkZNUVNXMGROYlpKaHpadFBxc2dMLVdQM2V1eDJWM2twWHQxcG14Sk5RQTAyUlNMV194bnhEZEVRRFlPWHNhZlRnQjZySE5rWTYzRFA0UzNHWXNlbnlta3Y1VG5YanZWaTZpb2V1TVU2RHpEVjNsYTV6RkxZbWY0cXhiUTJSQkwzY254eEtaY3hmcXlhNFE2NWQwUUVoWEZ1dHRCeGJUM0NvLUR0RGhCZXRLVDJTNm5FZUpRVmlxeWxGVVRxSkJsS2xyaEg4eVhXY3haWFFpeU1kSVBXdjJHWFdITncwTTdlZ1dEQjJrSFUxdmg2enBPV2Q1VkRMcGtybWpCU2JfdkJVcDNWdFBNMHBKMW90VmZXQ1ZOYlpBSHpEVzRkRUc5c2t1dEJvck8wQVEtcjIxdjBTanlYVHppWnZiTDBHdTUxSnRaTQ==","email":"irathore@cisco.com"}}}'
+sshKey: |
+  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDBgdcnPJ1CM7bh73S0N/uSzbpSPK+XcfGJ2jus93Zo87UJOhplMSQlZ6/SBtknQhybDwGBdJBGe5BBp2LU8KWM1juinD4n3ZXRbF8nrAOkPO9IPhZbWFqIcKpzm3s7oPUMOdpQaFfqMtXP0Y6Gb+4XqIR+wpURu74fGqS54raT3B+7ez9SKYpebWOZsboSxY7dtjhdFHNOqhIXtpDxRHsvxdt9KMkkNdSV756TCq2ITjghsbnSNrrf0WMKvPMJWcJ1PSdyS1/mW2Yv4erMUZf4jToPITZCF3v2+6Cqmupa/TceRZ2TBlS6pHEVyM4fU2p+K8DD7TXZ68JLw6qjr6Rl noiro@os-bm-1-extrtr.noiro.lab

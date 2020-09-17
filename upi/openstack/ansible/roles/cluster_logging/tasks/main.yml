@@ -1,0 +1,6 @@
+- include_tasks: namespaces.yml
+- include_tasks: elasticsearch_operator.yml
+- include_tasks: cluster_logging_operator.yml
+- include_tasks: configure_cluster_logging.yml
+- include_tasks: configure_elasticsearch.yml
+- include_tasks: configure_curator.yml

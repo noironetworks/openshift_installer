@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: compute-resources-notterminating
+spec:
+  hard:
+    requests.cpu: {{ new_project_projectsize|int * 125 }}m
+    requests.memory: {{ new_project_projectsize|int * 1 }}Gi
+    limits.cpu: {{ new_project_projectsize|int * 1000 }}m
+    limits.memory: {{ new_project_projectsize|int *2 }}Gi
+  scopes:
+  - NotTerminating

@@ -1,0 +1,95 @@
+---
+
+- name: Copy ca chain to controller node
+  copy:
+    content: "{{ openstack_ca_chain }}"
+    dest: "{{ ansible_ctrl_node_dir }}/openstack_ca_chain.pem"
+    mode: "0644"
+  ignore_errors: true
+
+- name: get OpenStack token
+  uri:
+    url: "{{ cloud.openstack.endpoint }}/auth/tokens"
+    method: POST
+    body_format: json
+    body: 
+      auth:
+        identity:
+          methods:
+          - password
+          password:
+            user:
+              name: "{{ cloud.user.name }}"
+              domain:
+                id: "{{ cloud.user.domain }}"
+              password: "{{ cloud_user_password }}"
+        scope:
+          project:
+            name: "{{ cloud.project.name }}"
+            domain:
+              id: "{{ cloud.project.domain }}"
+    status_code: 201
+    headers:
+      Content-Type: "application/json"
+    validate_certs: no
+  register: keystone_response
+  #  no_log: true
+
+- name: Set authentication data os_userid and os_token
+  set_fact: 
+    os_userid: "{{ keystone_response.json.token.user.id }}"
+    os_token: "{{ keystone_response.x_subject_token }}"
+
+- name: Validate OpenStack token is not blank
+  fail: 
+    msg: "Openstack token missing"
+  when: os_token is undefined or os_token is none or os_token|trim =='' 
+
+- name: set projectid from project name when project id is not defined
+  include_tasks:
+      get_project_id.yml
+  when: osp_project_id is not defined 
+
+- name: set projectid from variable 
+  set_fact:
+      osp_project_id_run: "{{ osp_project_id }}"
+  when: osp_project_id is defined
+
+- name: set openstack auth
+  set_fact:
+    openstack_project:
+      auth_url: "{{ cloud.openstack.endpoint }}"
+      username: "{{ cloud.user.name }}"
+      password: "{{ cloud_user_password }}"
+      project_id: "{{ osp_project_id_run }}"
+      project_domain_name: "{{ cloud.project.domain }}"
+      user_domain_name: "{{ cloud.user.domain }}"
+      domain_name: "{{ cloud.openstack.domain }}"
+  no_log: true
+  changed_when: false
+
+- name: Set authentication fact for direct openstacksdk usage
+  set_fact:
+    openstack_cloud_auth: >
+      --os-username "{{ cloud.user.name }}" --os-password "{{ cloud_user_password }}"
+      --os-auth-url "{{ cloud.openstack.endpoint }}" --os-cacert "{{ ansible_ctrl_node_dir }}/openstack_ca_chain.pem"
+      --os-auth-type password --os-project-id "{{ osp_project_id_run }}" --os-identity-api-version 3
+  changed_when: false
+  no_log: true
+
+- name: ensure we have the facts set for the openstacks endpoints
+  set_fact:
+    osp_swift_endpoint: "{{ keystone_response.json.token.catalog | json_query(swiftendpoint) | json_query(swiftendpointurl) | first }}"
+    osp_neutron_endpoint: "{{ keystone_response.json.token.catalog | json_query(neutronendpoint) | json_query(neutronendpointurl) | first }}"
+    osp_image_endpoint: "{{ keystone_response.json.token.catalog | json_query(glanceendpoint) | json_query(glancenendpointurl) | first }}"
+  vars:
+    swiftendpoint: "[?name=='swift'].endpoints[]"
+    swiftendpointurl: "[?interface=='public'].url"
+    neutronendpoint: "[?name=='neutron'].endpoints[]"
+    neutronendpointurl: "[?interface=='public'].url"
+    glanceendpoint: "[?name=='glance'].endpoints[]"
+    glancenendpointurl: "[?interface=='public'].url"    
+
+- name: ensure we have the fact for the rados gw (hostname of swift endpoint)
+  set_fact:
+    osp_rados_gw: "{{ osp_swift_endpoint | urlsplit('hostname') }}"

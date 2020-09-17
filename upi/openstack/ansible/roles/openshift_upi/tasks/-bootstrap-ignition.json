@@ -1,0 +1,19 @@
+{
+  "ignition": {
+    "config": {
+      "append": [
+        {
+          "source": "http://172.28.184.65:8080/v1/AUTH_3c4ac34308d54f9da65b66fc287f588b/bootstrap/bootstrap.ign",
+          "verification": {}
+        }
+      ]
+    },
+    "security": {},
+    "timeouts": {},
+    "version": "2.2.0"
+  },
+  "networkd": {},
+  "passwd": {},
+  "storage": {},
+  "systemd": {}
+}

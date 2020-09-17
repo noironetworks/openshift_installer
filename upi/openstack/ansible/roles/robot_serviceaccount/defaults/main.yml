@@ -1,0 +1,4 @@
+robot_serviceaccount:
+  name: redacted_robot
+  namespace: redacted 
+  cluster_role: cluster-admin

@@ -1,0 +1,11 @@
+- name: Create clusteradmins group
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'group.yml.j2') }}"
+
+- name: Apply group role assigment for clusteradmins group to cluster-admin role
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('file', 'files/group_role_assignment.yml') }}"

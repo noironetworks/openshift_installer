@@ -1,0 +1,7 @@
+- hosts: all
+  gather_facts: no
+
+  tasks:
+  - name: 'Replace cluster endpoint stratergy to Loadbalancer'
+    command:
+      cmd: "oc replace --force --wait -f files/cluster_endpoint_strategy.json"

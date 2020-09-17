@@ -1,0 +1,264 @@
+
+:toc:
+
+= Moving from IPI to UPI
+
+== Objective
+
+In CW 31 and 32 the objective was to install OpenShift Container Platform 4.4 (without any Cisco ACI CNI integration) using UPI (user provisioned infrastructure).
+To achieve that, the existing playbooks, roles and inventories had to be used as basis.
+
+This document describes respective changes which have been implemented, shines a light on why and explains potential complex implementation details if existent.
+
+Furthermore, the opportunity was taken to adjust the playbooks to fulfill newly decided SDDC requirements:
+
+* new flavors have been introduced - the currently in P used ones will be removed after the UPI rollout
+* all images which redacted needs need to be provided by redacted.
+
+== Incorporated Changes due to SDDC Decisions
+
+=== No Images are provided by SDDC
+
+Previously images have been provided by SDDC for centos7 and RHCOS 4.3
+The decision has been taken that SDDC will not provide any images. Therefore it becomes the tenant's responsbility.
+
+To address that, an additional playbook has been developed, to upload images.
+
+=== Flavor Changes
+
+The flavors have changed - a list of the flavors can be found in SDDCs user documentation.
+After the switch to UPI the old flavors, whic we currently use, will be removed.
+The impact for us is:
+
+* we need to adjust the machinesets
+* we need to boot the instances with own root volumes since the new flavors have only 10GB - not even enough to boot CoreOS.
+
+This change has also been addressed in conjunction with the UPI development.
+
+== Inventory
+
+* OpenShift cluster: https://s-a-0000007.bpc-mgmt.bgn/ijc8fe/upi-inv
+* Credentials: https://s-a-0000007.bpc-mgmt.bgn/ijc8fe/upi-creds
+* QA Environment: https://s-a-0000007.bpc-mgmt.bgn/openshift/qa-env-inventory/-/tree/dev
+
+In the inventory the python ansible interpreter has been moved to the host in the group `controllernode`. It was unnecessary to put it on a play level where we had to duplicate this information.
+
+So, the inventory should look like this:
+
+```
+# cat <inventory>/hosts
+[controllernode]
+localhost ansible_connection=local ansible_python_interpreter=/bin/python3
+
+[bastion]
+
+```
+
+== Playbooks Branch
+
+* A rebased version of the branch janine_upi which has been used for testing is here:
+https://s-a-0000007.bpc-mgmt.bgn/openshift/ocp/-/tree/dev
+
+== Requirements
+
+=== Python version and libraries
+
+The following modules have been added to the existing venv on the ansible controller:
+* netaddr (to use Ansible's IP filters which is required for the UPI playbooks)
+* ansible (to use the venv's python version (3), and therefore all of the modules installed in there, including netaddr and a newer version of jinja2)
+
+=== Files on Control Node
+
+* /data/ansible/os_images has to exist - if you decide to use a different location for that, ensure to adjust the inventory respectively.
+* The images which shall be uploaded to glance should exist in that directory in the raw format. By the time of writing thihs docs, the following images have been placed there:
+** rhcos_4.4.raw
+** centos8.raw
+** centos7.raw
+
+These images are usually retrieved in the qcow2 disk format and hence need to be converted. The following command can be used to convert the images from qcow2 to raw:
+`qemu-img convert -p -f qcow2 -O raw <original qcow2 image>.qcow2 <new raw image>.raw`
+
+The ansible controller does not have the binary installed, so a suitable host needs to used for that.
+
+== Flow
+
+. Log in to the ansible controller
+. make sure you have the correct repositories cloned and if needed switched to the correct branches
+. source the venv: `source ~/venv-py-sddc/bin/activate`
+. cd into the playbooks directory `ocp`
+. upload the images first by running: `ansible-playbook type__upload_images.yaml -i ../<openshift-cluster-inventory> -i ../qa-env-inventory/ -i ../upi-creds/ --ask-vault-pass`
+.. check your inventory and the files in `/data/ansible/os_images` to make sure you upload the correct images
+.. this takes a while
+.. you should upload your images to glance at least - the code base right now only refers to glance images
+. run `ansible-playbook type__openshift_installation.yaml -i ../<openshift-cluster-inventory> -i ../qa-env-inventory/ -i ../upi-creds/ --ask-vault-pass`
+
+After that, a cluster should be sucessfully installed.
+
+== Implementation Details
+
+=== Jump Host
+
+First a jumphost is created. We also create a root volume here (80GB). This volume will remain even if the jumphost is deleted to address the desaster case that the jumphost might be deleted by accident.
+Tihs way you can run the jump host creation role again and attach the formerly used volume.
+
+After the jumphost has been created, it is being added to the ansible inventory (group `bastion`).
+
+For the UPI installation we use centos8 as jumphost OS. This allows us to install a recent OpenStack repository in order to install the openstacksdk and client onto the jumphost.
+Not only is this convenient but also necessary for the UPI playbooks.
+
+A technical alternative to that would be to use pip to install the openstacksdk and instruct ansible to use a respectively set up virtual environment.
+
+
+=== Image Upload
+
+The image upoad takes place on the controller node.
+
+The respective playbook calls two roles:
+
+* openstack_auth
+* openstack_image_upload
+
+The vars, which are needed for configuring what is being uploaded to swift or glance can be seen in `defaults/main.yaml`
+
+It makes use of the openstack command directly for uploading images to swift. The respective os_* module in Ansible did not work for that although it reported success.
+
+For glance we make use of the os_image module. First the respective images are being deleted if already existent, then they get uploaded.
+
+=== OpenShift Installation
+
+After the jumphost has been successfully created, the installation playbook - assuming the vanilla OpenShift scenario - goes on and prepares the jumphost for the OCP installation and finally kicks off the installation.
+The entry point task for all of that is the tasks file `configure_jumphost.yml` in the role `openshift_create_cluster`.
+The following happens during execution of that:
+
+1. facts are retrieved from the ansible controller, mainly openstack endpoints.
+2. packages are installed on the jumphost. The yum/dnf proxy is configured as well.
+3. OpenShift binaries are being downloaded and installed.
+4. the redacted CA certificate is added to the jumphost's truststore
+5. the clouds.yaml file is created on the jumphost - OpenShift uses it for the installation. This is where it picks up the cloud provider credentials.
+6. The `.bashrc` is modified, to export the `KUBECONFIG` environment variable and add `oc` bash completion.
+7. `install-config.yaml` - the installation config file for OpenShift 4 is being created
+8. Free floating IPs are being released, to avoid that especially during tests, the quota is being exceeded.
+9. Last but not least: the installation is started. Depending on the value for `openshift_installation_method` either IPI or UPI is being used
+
+
+==== Floating IPs
+
+As mentioned in point 8. free floating IPs are released. The logic is based on the fact, that descriptions for floating IPs cannot be changed after the creation time.
+Therefore we delete a FIP only when:
+
+* it is not being associated (no fixed IP address)
+* it's descirption is neither `OpenShift API` nor `OpenShift Ingress`
+
+If a FIP exists with such a description, we re-use it instead. In case of vanilla OCP installations, this should avoid constant DNS entry changes to request during testing times.
+
+
+==== UPI - Changes Compared to the Official Docs
+
+The documentation for UPI on OpenStack can be found here:
+* Installation: https://docs.openshift.com/container-platform/4.4/installing/installing_openstack/installing-openstack-user.html
+* Uninstallation: https://docs.openshift.com/container-platform/4.4/installing/installing_openstack/uninstalling-cluster-openstack.html
+
+The playbooks in the documentation assume that the ansbible control node and server which runs the OCP installation are the same. Our deployment architecture looks different, the ansible controller can only provision a jumphost, the OpenShift installation itself happens on the jumphost.
+
+NOTE: This deployment architecture can be changed, however this requires the ansible user to become root. Only then it becomes an option worth discussing.
+
+
+The entry point for the UPI installation is the task:
+
+[source,yaml]
+----
+# cat install_openshift.yml
+- name: run OpenShift UPI installation
+  import_role:
+    name: openshift_upi
+  tags:
+    - ocp_install
+  when:
+  - (openshift_installation_method | upper) == 'UPI'
+----
+
+The `openshift_upi` role is as close as possible to the playbooks from the documentation.
+
+1. In the docs, everything is a playbook -> we use an ansible role due to make it "native" to our current implementation
+2. In the docs, common.yaml is imported as a playbook -> we converted it into a tasks file inside the role and therefore use `import_tasks`
+3. In the docs, in common.yaml variables are loaded from `metadata.json`, a file generated by the openshift installer. -> `include_vars`, by design, is run on the ansible controller (so not where the metadata.json file is located). Therefore we changed it to first fetch it from the jumphost and then include the variables from there.
+4. the os_server tasks had to be changed in order to use proper root volumes. This is necessary due to the flavors.
+5. The docs state to remove the maninfests for the worker machinesets - or adjust it. We chose the latter to not have to spin up compute nodes ourselves and approve the CSRs. Instead we let the Machine API take care of that. You can choose to let Ansible create the worker nodes. The tasks `compute-nodes.yaml` is doing that and can be included respectively in the `main.yaml`. The tasks have been adjusted to work with the SDDC flavor. However the CSR approval is _not_ automated and therefore would need to be done manually during installation time.
+6. When creating the nodes, we switched from using `lookup` to use content from using `slurp`. This is necessary since `lookup` is always being executed on the ansible control node. The files however are on the jumphost. This way we avoid having to transfer the files to the ansible controller.
+
+Apart from that, the manual steps documented in the docs have been automated.
+
+===== Uninstalling
+
+A playbook has been added the remove the OpenShift cluster created via UPI: `type_openshift_down.yaml`.
+Nodes, which have been created using machinesets, need to be scaled down to zero before that - they will not be removed by the playbook.
+
+=== Refactorings
+
+==== Proxy Configuration for YUM/DNF and Repositories
+
+The proxy handling has been refactored.
+You can pass a var `repo_names` (list) and then it configures the repository proxies.
+In any case the `/etc/yum.conf` is being configured to use the proxy specified in the inventory.
+
+==== Detangling of OpenShift Installation Role
+
+The OpenShift installation role formerly consisted of two task files. One to create the jumphost and create / re-use the FIP for the API, and one file to do all the rest.
+To increase maintainability and readability, it has been split up into multiple tasks which logically belong together.
+
+==== Remove Hard-coded OpenStack Endpoints
+
+Formerly the OpenStack public endpoints required by the playbooks have been put into the openstack environment inventory. This is technically not necessary since the token you retrieve from Keystone retuns the service catalog which lists the respective endpoints. We now make use of that.
+
+==== Cluster Logging
+
+As an example, in the cluster_logging role the variables have been renamed. This allows to only need to specifiy in the inventory whatever we may want and use the defaults for the rest. this makes especially testing and maintenance easier.
+
+==== Renaming of Roles
+
+Some roles have been renamed to have a more streamlined or more descriptive name.
+* The ACI roles, which had cisco or aci in the name, are now called cisco_aci_*
+* the `create_machinesets` role has been renamed to `machinesets`. Respectively, for the sake of consistency, it is renamed in the inventory repository.
+* minor renamings when dashes have been used in the role names -> now underscore is used to have it consistent across the roles
+
+== Problems During Implementation & Tests
+
+=== Cinder Crash During IPI Installation
+
+* Root cause: IPI installer creates 4 root volumes in parallel. When using qcow2 images, the image conversion is putting too much load on the controller.
+* Resolution: we use raw images now. The topic has been addressed in the architecture board.
+
+=== Lack of usable environment
+
+The testing has been done on the OpenStack D environment. In between this env was broken due to Cinder having crashed. A switch to P was not possible as the proxy is more restrictive there and not even a jumphost creation was possible. The next day the Q environment was redeployed, offering an alternative environment which eventually solved the bottleneck.
+
+=== Lack of Python Modules
+
+netaddr was installed but not being picked up since it is a python3 module. -> Installation of ansible into the venv fixed it.
+
+== Potential Future Topics / Improvements
+
+=== Image Upload
+
+Compare checksums and only delete if the checksums of the to be uploaded image differs from the already existing image.
+
+=== Optional Download of OpenShift Client Binaries
+
+Ideally the openshift-install and oc binary are being checked:
+
+* whether they exist
+* whether the version is the desired one
+
+and if that is not fulfilled download the binaries. For now, the tag `download_ocp_binaries` can be used to skip these tasks.
+
+=== Renaming of Variables
+
+See the cluster logging section in the refactoring.
+
+=== Ingress Controller and API Certificates
+
+The `ingress_controller` role contains code for the API (adding the custom certificate). This should be moved to a separate role for configuring the API.
+
+=== Single Variable for redacted CA Certificate
+
+The CA certificate for the API, Ingress and OpenStack Endpoints are the same. Only one certificate should be used in the inventory.

@@ -1,0 +1,15 @@
+- name: "Create ACI preconfig file from template"
+  template:
+    src: templates/aci_preconfig.j2
+    dest: "{{ ansible_user_dir }}/{{ acc_preconfig_manifest_file_name }}"
+  notify: ACI | remove intermediate acc provisioning files
+  tags:
+    - ocp_aci_pre_config
+
+- name: "Provision network config in the ACI fabric"
+  command: acc-provision -c {{ acc_preconfig_manifest_file_name }} -o {{ acc_provisioning_out_file_name }} -f openshift-{{ ocp_version }} -a -u {{ aci_user }} -p {{ aci_password }}
+  args:
+    chdir: "{{ ansible_user_dir }}"
+  notify: ACI | remove intermediate acc provisioning files
+  tags:
+    - ocp_aci_pre_config

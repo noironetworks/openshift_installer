@@ -1,0 +1,11 @@
+apiVersion: aci.snat/v1
+kind: RdConfig
+metadata:
+  name: routingdomain-config
+  namespace: aci-containers-system
+spec:
+  usersubnets:
+{% for existing_subnet in aci_rdconfig_usersubnets %}
+  - "{{ existing_subnet }}"
+{% endfor %}
+  - "{{ aci_ext_ip_subnet }}"

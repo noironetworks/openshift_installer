@@ -1,0 +1,28 @@
+- name: ensure namespace for elastic search exists
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ clo_elasticsearch_operator_namespace }}"
+        annotations:
+          openshift.io/node-selector: ""
+        labels:
+          openshift.io/cluster-monitoring: "true"
+
+- name: ensure namespace for cluster logging operator exists
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ clo_cluster_logging_namespace }}"
+        annotations:
+          openshift.io/node-selector: ""
+        labels:
+          openshift.io/cluster-logging: "true"
+          openshift.io/cluster-monitoring: "true"

@@ -1,0 +1,18 @@
+---
+- name: Copy ca chain to bastion
+  copy:
+    content: "{{ openstack_ca_chain }}"
+    dest: "{{ ansible_user_dir }}/redacted_root_ca.pem"
+    mode: "0644"
+
+- name: Copy ca chain to pki folder
+  copy:
+    content: "{{ openstack_ca_chain }}"
+    dest: "/etc/pki/ca-trust/source/anchors/redacted_root_ca.pem"
+    mode: "0644"
+  become: true
+
+- name: Update ca-trust anchor
+  command:
+    update-ca-trust
+  become: true

@@ -1,0 +1,50 @@
+---
+# needs the following variables:
+# - target_version
+# - target_channel
+# either you define only target_version (e.g. for upgrades from 4.3.0 to 4.3.1)
+# or only target_channel (e.g. after switching from fast-4.x to stable-4.x after a minor version upgrade)
+# both options are mutually exclusive and upgrade paths which include mciro and minor version upgrades
+# have to be handled by running these tasks one after the other since doing eveything at once won't work in OpenShift
+
+- include_vars: json_queries.yml
+- include_vars: defaults_when_empty.yml
+
+- include_tasks: get_current_clusterversion.yml
+
+- name: set target_version if not defined (switching channel scenario)
+  set_fact:
+    target_version: "{{ current_clusetrversion_last_update_version }}"
+  when: target_version is not defined
+
+- name: upgrade to desired version
+  k8s:
+    state: present
+    merge_type: merge
+    definition: "{{ lookup('template', 'clusterversion.yml.j2')}}"
+  register: cluster_update_result
+
+# ensure to get the now possibly changed clusterversion
+- include_tasks: get_current_clusterversion.yml
+
+# blocks can't have retry until constructs right now
+# same goes for included / imported tasks
+# so we make sure to not have templating errors by assigning defaults in case we can't reach the API
+# this is expected during an upgrade
+# keep in mind that this is more of a workaround than a clean solution - ideally we write an ansible module for all of this
+- name: wait for update to finish
+  uri:
+    url: "{{ openshift_public_api_url }}/apis/config.openshift.io/v1/clusterversions/version"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ cluster_upgrade_oauth_token }}"
+    status_code: [200,401,404,500,503]
+    return_content: yes
+    validate_certs: no
+  register: current_clusterversion_result
+  ignore_errors: yes
+  until: 
+  - ((current_clusterversion_result.content | from_json | default(dummy_string, true) | json_query(jq_state) | default(dummy_clusterstate, true)) == 'Completed') 
+  - ((current_clusterversion_result.content | from_json | default(dummy_string, true) | json_query(jq_version) | default(dummy_clusterversion, true)) is version(target_version, operator='eq', strict=True))
+  retries: "{{ cluster_upgrade.retries }}"
+  delay: "{{ cluster_upgrade.delay }}"

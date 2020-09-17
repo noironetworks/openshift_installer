@@ -1,0 +1,33 @@
+---
+
+- name: ensure container os_images exists
+  os_object:
+    auth: "{{ openstack_project }}"
+    ca_cert: "{{ ansible_ctrl_node_dir }}/openstack_ca_chain.pem"
+    state: present
+    container: "{{ upload_image_to_swift_container }}"
+    container_access: private
+
+- name: ensure images are uploaded to container os_images
+  command: "openstack {{ openstack_cloud_auth }} object create {{ upload_image_to_swift_container }} {{ item | basename }}"
+  args:
+    chdir: "{{ item | dirname }}"
+  loop: "{{ upload_image_to_swift_images }}"
+  no_log: True
+
+- name: ensure images are deleted before uploading them
+  os_image:
+    auth: "{{ openstack_project }}"
+    ca_cert: "{{ ansible_ctrl_node_dir }}/openstack_ca_chain.pem"
+    name: "{{ item | basename | splitext | first }}"
+    state: absent
+
+- name: ensure images are uploaded to glance
+  os_image:
+    auth: "{{ openstack_project }}"
+    ca_cert: "{{ ansible_ctrl_node_dir }}/openstack_ca_chain.pem"
+    name: "{{ item | basename | splitext | first }}"
+    disk_format: "{{ item | splitext | last | replace('.', '')}}"
+    state: present
+    filename: "{{ item }}"
+  loop: "{{ upload_image_to_glance_images }}"

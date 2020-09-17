@@ -1,0 +1,5 @@
+- name: Disable project self-provisioning
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('file', 'files/cluster_role_binding_self_provisioners.yml') }}"

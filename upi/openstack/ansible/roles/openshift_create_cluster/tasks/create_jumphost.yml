@@ -1,0 +1,126 @@
+---
+- name: Create new keypair from ocp keypair
+  os_keypair:
+          #    auth: "{{ openstack_project }}"
+    ca_cert: "{{ ansible_ctrl_node_dir }}/openstack_ca_chain.pem"
+    state: present
+    name: "{{ cloud.user.name }}-key"
+    public_key: "{{ cloud.user.pubkey }}"
+  ignore_errors: true
+
+- name: Create the private Jumphost network
+  os_network:
+    auth: "{{ openstack_project }}"
+    # ca_cert: "{{ ansible_ctrl_node_dir }}/openstack_ca_chain.pem"
+    state: present
+    name: "{{ cloud.project.name }}-net"
+    external: false
+    shared: false
+  register: cloud_network
+
+- name: Create the private Jumphost subnet
+  os_subnet:
+    auth: "{{ openstack_project }}"
+    ca_cert: "{{ ansible_ctrl_node_dir }}/openstack_ca_chain.pem"
+    state: present
+    network_name: "{{ cloud_network.id }}"
+    name: "{{ cloud.project.name }}-sub"
+    ip_version: "4"
+    cidr: "{{ cloud.project.subnet }}.0/24"
+    gateway_ip: "{{ cloud.project.subnet }}.1"
+    enable_dhcp: true
+    allocation_pool_start: "{{ cloud.project.subnet }}.10"
+    allocation_pool_end: "{{ cloud.project.subnet }}.250"
+    dns_nameservers: "{{ cloud.project.dnsserver }}"
+
+- name: Create the Jumphost router
+  ignore_errors: true #for some reasons, re-running this task gives errors
+  os_router:
+    auth: "{{ openstack_project }}"
+    ca_cert: "{{ ansible_ctrl_node_dir }}/openstack_ca_chain.pem"
+    state: present
+    name: "{{ cloud.project.name }}-router"
+    network: "{{ cloud.project.ext_network }}"
+    interfaces:
+      -  "{{ cloud.project.name }}-sub"
+
+- name: Create a new security group
+  os_security_group:
+    auth: "{{ openstack_project }}"
+    ca_cert: "{{ ansible_ctrl_node_dir }}/openstack_ca_chain.pem"
+    state: present
+    name: "{{ cloud.project.name }}-ssh"
+
+- name: Create a new security group rule allowing any ICMP
+  os_security_group_rule:
+    auth: "{{ openstack_project }}"
+    ca_cert: "{{ ansible_ctrl_node_dir }}/openstack_ca_chain.pem"
+    security_group: "{{ cloud.project.name }}-ssh"
+    protocol: "icmp"
+    remote_ip_prefix: "0.0.0.0/0"
+
+- name: Create a new security group rule allowing any SSH connection
+  os_security_group_rule:
+    auth: "{{ openstack_project }}"
+    ca_cert: "{{ ansible_ctrl_node_dir }}/openstack_ca_chain.pem"
+    security_group: "{{ cloud.project.name }}-ssh"
+    protocol: "tcp"
+    port_range_min: 22
+    port_range_max: 22
+    remote_ip_prefix: "0.0.0.0/0"
+
+# either the volume has been created and we wait until it's ready (available)
+# or the volume is already there and attached (in-use)
+- name: ensure volume for jumphost exists
+  os_volume:
+    display_name: jumphost
+    auth: "{{ openstack_project }}"
+    ca_cert: "{{ ansible_ctrl_node_dir }}/openstack_ca_chain.pem"
+    image: "{{ cloud.project.jumphost_image_name }}"
+    size: 80
+    state: present
+    wait: true
+  register: create_jumphost_volume_result
+  retries: 1
+  delay: 5
+  ignore_errors: true
+  until: create_jumphost_volume_result.volume.status in ("available", "in-use")
+
+- debug:
+    msg: "System {{ cloud.user.name }}-key"
+
+- name: Create bastion/jump server instance
+  #  ignore_errors: true
+  os_server:
+    auth: "{{ openstack_project }}"
+    ca_cert: "{{ ansible_ctrl_node_dir }}/openstack_ca_chain.pem"
+    state: present
+    name: "{{ cloud.project.name }}-jump"
+    flavor: "{{ cloud.project.jumphost_flavor }}"
+    security_groups: "{{ cloud.project.name }}-ssh"
+    key_name: "{{ cloud.user.name }}-key"
+    nics:
+      - net-id: "{{ cloud_network.id }}"
+    reuse_ips: false
+    #    boot_volume: jumphost
+    image: "{{ cloud.project.jumphost_image_name }}"
+    wait: true
+    userdata: |
+      #cloud-config
+      users:
+        - name: ansible_deployer
+          sudo: ALL=(ALL) NOPASSWD:ALL
+          ssh_authorized_keys:
+            - "{{ cloud.user.pubkey }}"
+
+- name: Attach Floating IP to Bastion Host
+  os_floating_ip:
+    auth: "{{ openstack_project }}"
+    ca_cert: "{{ ansible_ctrl_node_dir }}/openstack_ca_chain.pem"
+    server: "{{ cloud.project.name }}-jump"
+    network: "{{ cloud.project.ext_network }}"
+    purge: true
+  register: "bastionnetwork"
+
+- include_role:
+    name: add_bastion_host

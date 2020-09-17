@@ -1,0 +1,27 @@
+---
+#Login in to ACI. Input: IP, Username and password Return Token
+- name: Login ACI
+  uri:
+    url: "https://{{apic_hosts_ip}}/api/aaaLogin.json"
+    method: POST
+    body_format: json
+    validate_certs: no
+    headers:
+      Accept: 'application/json'
+    body:
+      aaaUser:
+        attributes:
+          name: "{{ aci_user }}"
+          pwd: "{{ aci_password }}"
+    status_code: 200
+    return_content: yes
+  register: aci_login_result
+
+- name: "Display Error Message when login failed"
+  debug:
+    msg: "WARNING:{{ aci_login_result.json.imdata[0].error.attributes.text }}"
+  when: aci_login_result.status != 200
+
+- name: set_token_variable
+  set_fact:
+    aci_login_token: "{{ aci_login_result.set_cookie }}"

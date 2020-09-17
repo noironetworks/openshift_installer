@@ -1,0 +1,32 @@
+- name: ensure curator config map is configured to have index deletion
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'curator_configmap.yaml.j2')}}"
+
+- name: wait for curator job to be available
+  k8s_info:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    api_version: batch/v1beta1
+    kind: CronJob
+    name: curator
+    namespace: "{{ clo_cluster_logging_namespace }}"
+  register: cluster_logging_curator
+  until: cluster_logging_curator.resources | length > 0
+  retries: 20
+  delay: 5
+
+- name: limit curation by disabling concurrency
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    name: curator
+    namespace: "{{ clo_cluster_logging_namespace }}"
+    definition:
+      apiVersion: batch/v1beta1
+      kind: CronJob
+      metdadata:
+        name: curator
+        namespace: "{{ clo_cluster_logging_namespace }}"
+      spec:
+        concurrencyPolicy: "{{ clo_curator_concurrency_policy }}"

@@ -1,0 +1,15 @@
+- name: Create new storageclass
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'new-storageclass.yml.j2') }}"
+  loop: "{{ storageclass_list }}"
+  loop_control:
+    loop_var: storageclass_item
+    label: storageclass_item.name
+
+- name: Unset default for standard storageclass
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'standard-storageclass.yml.j2') }}"

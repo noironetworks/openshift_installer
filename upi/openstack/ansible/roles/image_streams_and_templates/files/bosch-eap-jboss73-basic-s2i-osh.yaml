@@ -1,0 +1,347 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+labels:
+  template: redacted-eap-jboss73-basic-s2i-redacted
+message: A new EAP 7.3 based application has been created in your project.
+metadata:
+  annotations:
+    description: An application template for Red Hat JBoss EAP 7.3 applications built using S2I. For more information
+      about using this template, see https://github.com/jboss-container-images/jboss-eap-7-openshift-image/blob/eap73/README.adoc
+    iconClass: icon-eap
+    openshift.io/display-name: redacted redacted JBoss EAP 7.3
+    openshift.io/provider-display-name: Robert redacted GmbH
+    tags: eap,javaee,java,jboss
+    template.openshift.io/bindable: "false"
+    template.openshift.io/documentation-url: https://access.redhat.com/documentation/en/red-hat-jboss-enterprise-application-platform/
+    template.openshift.io/long-description: This template defines resources needed
+      to develop a Red Hat JBoss Enterprise Application Platform 7.3 based application,
+      including a build configuration, application deployment configuration, etc.
+      This template had been derived from RedHat's eap72-basic-s2i template
+      adding redacted specific enrichments like limits, context root, git source secret.
+    template.openshift.io/support-url: https://access.redhat.com
+    version: "1.0"
+  labels:
+    samples.operator.openshift.io/managed: "false"
+  name: redacted-eap-jboss73-basic-s2i-redacted
+  namespace: openshift
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      description: The web server's http port.
+    labels:
+      application: ${APPLICATION_NAME}
+    name: ${APPLICATION_NAME}
+  spec:
+    ports:
+    - port: 8080
+      targetPort: 8080
+    selector:
+      deploymentConfig: ${APPLICATION_NAME}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      description: The JGroups ping port for clustering.
+      service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+    labels:
+      application: ${APPLICATION_NAME}
+    name: ${APPLICATION_NAME}-ping
+  spec:
+    clusterIP: None
+    ports:
+    - name: ping
+      port: 8888
+    publishNotReadyAddresses: true
+    selector:
+      deploymentConfig: ${APPLICATION_NAME}
+- apiVersion: v1
+  id: ${APPLICATION_NAME}-http-https
+  kind: Route
+  metadata:
+    annotations:
+      description: Route for application's http and https service.
+    labels:
+      application: ${APPLICATION_NAME}
+    name: ${APPLICATION_NAME}
+  spec:
+    path: ${APP_CONTEXTROOT}
+    tls:
+      insecureEdgeTerminationPolicy: Redirect
+      termination: edge
+    to:
+      name: ${APPLICATION_NAME}
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      application: ${APPLICATION_NAME}
+    name: ${APPLICATION_NAME}
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    labels:
+      application: ${APPLICATION_NAME}
+    name: ${APPLICATION_NAME}
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: ${APPLICATION_NAME}:latest
+    source:
+      contextDir: ${CONTEXT_DIR}
+      git:
+        ref: ${SOURCE_REPOSITORY_REF}
+        uri: ${SOURCE_REPOSITORY_URL}
+      sourceSecret:
+        name: ${SOURCE_SECRET}
+      type: Git
+    strategy:
+      sourceStrategy:
+        env:
+        - name: MAVEN_MIRROR_URL
+          value: ${MAVEN_MIRROR_URL}
+        - name: MAVEN_ARGS_APPEND
+          value: ${MAVEN_ARGS_APPEND}
+        - name: ARTIFACT_DIR
+          value: ${ARTIFACT_DIR}
+        forcePull: true
+        from:
+          kind: ImageStreamTag
+          name: ${IMAGE_STREAM_NAME}:${IMAGE_STREAM_TAG}
+          namespace: ${IMAGE_STREAM_NAMESPACE}
+        incremental: true
+      type: Source
+    triggers:
+    - github:
+        secret: ${GITHUB_WEBHOOK_SECRET}
+      type: GitHub
+    - generic:
+        secret: ${GENERIC_WEBHOOK_SECRET}
+      type: Generic
+    - imageChange: {}
+      type: ImageChange
+    - type: ConfigChange
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      application: ${APPLICATION_NAME}
+    name: ${APPLICATION_NAME}
+  spec:
+    replicas: 1
+    selector:
+      deploymentConfig: ${APPLICATION_NAME}
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          application: ${APPLICATION_NAME}
+          deploymentConfig: ${APPLICATION_NAME}
+        name: ${APPLICATION_NAME}
+      spec:
+        containers:
+        - env:
+          - name: JGROUPS_PING_PROTOCOL
+            value: dns.DNS_PING
+          - name: OPENSHIFT_DNS_PING_SERVICE_NAME
+            value: ${APPLICATION_NAME}-ping
+          - name: OPENSHIFT_DNS_PING_SERVICE_PORT
+            value: "8888"
+          - name: MQ_CLUSTER_PASSWORD
+            value: ${MQ_CLUSTER_PASSWORD}
+          - name: MQ_QUEUES
+            value: ${MQ_QUEUES}
+          - name: MQ_TOPICS
+            value: ${MQ_TOPICS}
+          - name: JGROUPS_CLUSTER_PASSWORD
+            value: ${JGROUPS_CLUSTER_PASSWORD}
+          - name: AUTO_DEPLOY_EXPLODED
+            value: ${AUTO_DEPLOY_EXPLODED}
+          - name: JAVA_MAX_MEM_RATIO
+            value: ${JAVA_MAX_MEM_RATIO}
+          - name: JAVA_INITIAL_MEM_RATIO
+            value: ${JAVA_INITIAL_MEM_RATIO}
+          - name: GC_MAX_METASPACE_SIZE
+            value: ${GC_MAX_METASPACE_SIZE}
+          image: ${APPLICATION_NAME}
+          imagePullPolicy: Always
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                - /opt/eap/bin/jboss-cli.sh
+                - -c
+                - :shutdown(timeout=60)
+          livenessProbe:
+            exec:
+              command:
+              - /bin/bash
+              - -c
+              - /opt/eap/bin/livenessProbe.sh
+            initialDelaySeconds: ${{INITIAL_DELAY}}
+            periodSeconds: 120
+            timeoutSeconds: 5
+          name: ${APPLICATION_NAME}
+          ports:
+          - containerPort: 8778
+            name: jolokia
+            protocol: TCP
+          - containerPort: 8080
+            name: http
+            protocol: TCP
+          - containerPort: 8888
+            name: ping
+            protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+              - /bin/bash
+              - -c
+              - /opt/eap/bin/readinessProbe.sh false
+            initialDelaySeconds: ${{INITIAL_DELAY}}
+            periodSeconds: 120
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: ${CPU_LIMIT}
+              memory: ${MEMORY_LIMIT}
+            requests:
+              cpu: ${CPU_REQUEST}
+              memory: ${MEMORY_REQUEST}           
+        terminationGracePeriodSeconds: 75
+    triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - ${APPLICATION_NAME}
+        from:
+          kind: ImageStreamTag
+          name: ${APPLICATION_NAME}:latest
+      type: ImageChange
+    - type: ConfigChange
+parameters:
+- description: Another possibility could be redacted-eap73-openjdk8-openshift-rhel7
+  displayName: ImageStream Name
+  name: IMAGE_STREAM_NAME
+  required: true
+  value: redacted-eap73-openjdk11-openshift-rhel8
+- description: Another possibility could be quality or latest or 7.3.0
+  displayName: ImageStream Tag
+  name: IMAGE_STREAM_TAG
+  required: true
+  value: production
+- description: The name for the application.
+  displayName: Application Name
+  name: APPLICATION_NAME
+  required: true
+  value: eap-app
+- description: Context root of the application, means the /path behind the server name in the URL
+  displayName: Context root of the application
+  name: APP_CONTEXTROOT
+  required: true
+  value: /myjavaapp
+- description: Git source URI for application
+  displayName: Git Repository URL
+  name: SOURCE_REPOSITORY_URL
+  required: true
+  value: http://quickstarts.redacted.redacted.com/git/root/quickstarts.git
+- description: Git branch/tag reference
+  displayName: Git Reference
+  name: SOURCE_REPOSITORY_REF
+  value: openshift
+- description: Path within Git project to build; empty for root project directory.
+  displayName: Git Context Directory
+  name: CONTEXT_DIR
+  value: myjavaapp
+- description: Git Source Secret - Please keep this value for public Git repos. For private Git repos, please create new secret in the project before referencing it here. 
+  displayName: Git Source Secret
+  name: SOURCE_SECRET
+  value: dummysecret
+  required: true
+- description: Queue names, separated by commas. These queues will be automatically
+    created when the broker starts. Also, they will be made accessible as JNDI resources
+    in EAP. Note that all queues used by the application *must* be specified here
+    in order to be created automatically on the remote AMQ broker.
+  displayName: Queues
+  name: MQ_QUEUES
+- description: Topic names, separated by commas. These topics will be automatically
+    created when the broker starts. Also, they will be made accessible as JNDI resources
+    in EAP. Note that all topics used by the application *must* be specified here
+    in order to be created automatically on the remote AMQ broker.
+  displayName: Topics
+  name: MQ_TOPICS
+- description: AMQ cluster admin password - if empty it will be generated
+  displayName: AMQ cluster password
+  from: '[a-zA-Z0-9]{8}'
+  generate: expression
+  name: MQ_CLUSTER_PASSWORD
+  required: true
+- description: GitHub trigger secret - if empty it will be generated
+  displayName: Github Webhook Secret
+  from: '[a-zA-Z0-9]{8}'
+  generate: expression
+  name: GITHUB_WEBHOOK_SECRET
+  required: true
+- description: Generic build trigger secret - if empty it will be generated
+  displayName: Generic Webhook Secret
+  from: '[a-zA-Z0-9]{8}'
+  generate: expression
+  name: GENERIC_WEBHOOK_SECRET
+  required: true
+- description: Namespace in which the ImageStreams for Red Hat Middleware images are
+    installed. These ImageStreams are normally installed in the openshift namespace.
+    You should only need to modify this if you've installed the ImageStreams in a
+    different namespace/project.
+  displayName: ImageStream Namespace
+  name: IMAGE_STREAM_NAMESPACE
+  required: true
+  value: openshift
+- description: JGroups cluster password - if empty it will be generated
+  displayName: JGroups Cluster Password
+  from: '[a-zA-Z0-9]{8}'
+  generate: expression
+  name: JGROUPS_CLUSTER_PASSWORD
+  required: true
+- description: Controls whether exploded deployment content should be automatically
+    deployed
+  displayName: Deploy Exploded Archives
+  name: AUTO_DEPLOY_EXPLODED
+  value: "false"
+- description: Maven mirror to use for S2I builds
+  displayName: Maven mirror URL
+  name: MAVEN_MIRROR_URL
+- description: Maven additional arguments to use for S2I builds
+  displayName: Maven Additional Arguments
+  name: MAVEN_ARGS_APPEND
+  value: -Dcom.redhat.xpaas.repo.jbossorg
+- description: List of directories from which archives will be copied into the deployment
+    folder. If unspecified, all archives in /target will be copied.
+  name: ARTIFACT_DIR
+- description: The minimum amount of CPU the container is guaranteed [in millicores]
+  name: CPU_REQUEST
+  value: 100m
+- description: The maximum amount of CPU the container is allowed to use when running [in millicores]
+  name: CPU_LIMIT
+  value: 250m
+- description: The minimum amount of memory the container is guaranteed [in megabytes]
+  name: MEMORY_REQUEST
+  value: 256Mi
+- description: The maximum amount of memory the container is allowed to use when running [in megabytes]
+  name: MEMORY_LIMIT
+  value: 512Mi
+- description: Percentage value, which describes how much of the container's MEMORY_LIMIT is allocated max to the JVM (-Xmx)
+  name: JAVA_MAX_MEM_RATIO
+  value: "70"
+- description: Percentage value, which describes how much of the max allocated JVM memory (-Xmx) is used as min JVM memory (-Xms)
+  name: JAVA_INITIAL_MEM_RATIO
+  value: "50"
+- description: Size of JVM meta space [in megabytes]
+  name: GC_MAX_METASPACE_SIZE
+  value: "150"
+- description: Start-up time needed by the web application before OpenShift starts monitoring it [in seconds]
+  displayName: OpenShift Probe Delay
+  name: INITIAL_DELAY
+  value: "120"

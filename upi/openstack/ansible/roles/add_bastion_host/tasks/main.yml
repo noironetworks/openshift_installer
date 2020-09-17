@@ -1,0 +1,20 @@
+- name: get server info of openshift automation server
+  os_server_info:
+    auth: "{{ openstack_project }}"
+    server: "{{ cloud.project.name }}-jump"
+    ca_cert: "{{ ansible_ctrl_node_dir }}/openstack_ca_chain.pem"
+  register: openshift_automation_node_result
+
+- debug:
+    msg: "{{ openshift_automation_node_result}}"
+
+- name: add bastion node to inventory
+  add_host:
+    name: "{{ openshift_automation_node_result.openstack_servers[0].accessIPv4 }}"
+    groups: bastion
+
+- name: Wait for the machine to be reachable
+  wait_for_connection:
+    delay: 5
+    timeout: 300
+  delegate_to: "{{ openshift_automation_node_result.openstack_servers[0].accessIPv4 }}"

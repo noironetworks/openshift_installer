@@ -1,0 +1,3 @@
+upload_image_to_swift_container: "os_images"
+upload_image_to_swift_images: []
+upload_image_to_glance_images: []

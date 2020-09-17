@@ -1,0 +1,42 @@
+- name: Deploy NAMESPACE EPG in ACI
+  ignore_errors: yes
+  uri:
+    url: "https://{{ apic_hosts_ip }}/api/mo/uni.json"
+    method: POST
+    body_format: json
+    validate_certs: no
+    headers:
+      Cookie: "{{ aci_login_token }}"
+      Accept: 'application/json'
+    body:
+      fvAEPg:
+        attributes:
+          dn: "uni/tn-{{ clustername }}/ap-CUSTOMER_ANP/epg-{{ new_project_projectname|upper }}_EPG"
+          name: "{{ new_project_projectname|upper }}_EPG"
+          status: "created"
+        children:
+          - fvRsBd:
+              attributes:
+                tnFvBDName: "aci-containers-{{ clustername }}-pod-bd"
+          - fvRsSecInherited:
+              attributes:
+               tDn: "uni/tn-{{ clustername }}/ap-aci-containers-{{ clustername }}/epg-aci-containers-default"
+               status: "created"
+          - fvRsDomAtt:
+              attributes:
+                tDn: "uni/vmmp-OpenShift/dom-{{ clustername }}"
+                status: "created"
+              children:
+                - vmmSecP:
+                    attributes:
+                      status: "created"
+
+
+    return_content: yes
+    status_code: [200,400]
+  register: RESULT
+
+- name: Display Error Message when EPG deployment failed
+  debug:
+    msg="WARNING:{{ RESULT.json.imdata[0].error.attributes.text }}"
+  when: RESULT.status != 200

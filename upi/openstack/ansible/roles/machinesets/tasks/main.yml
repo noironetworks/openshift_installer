@@ -1,0 +1,48 @@
+---
+# see https://access.redhat.com/solutions/5061861
+- name: patch machineconfig daemonset to use universal toleration
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    merge_type: merge
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: DaemonSet
+      metadata:
+        name: "{{ item.name }}"
+        namespace: "{{ item.namespace }}"
+      spec:
+        template:
+          spec:
+            tolerations:
+            - operator: Exists
+  loop:
+  - { name: "machine-config-daemon", namespace: "openshift-machine-config-operator" }
+  - { name: "node-ca", namespace: "openshift-image-registry" }
+
+- k8s_info:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    api_version: config.openshift.io/v1
+    kind: Infrastructure
+    name: cluster
+  register: machineset_infrastructure_cluster_result
+  
+- name: set the cluster ID as fact
+  set_fact:
+    machineset_cluster_id: "{{ machineset_infrastructure_cluster_result.resources.0.status.infrastructureName }}"
+
+- name: ensure machinesets exist
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition: "{{ lookup('template', 'machineset.yml.j2')}}"
+  loop: "{{ machinesets }}"
+  loop_control:
+    loop_var: machineset
+
+- name: wait until nodes are ready
+  include_tasks: check_machineset_status.yml
+  loop: "{{ machinesets }}"
+  loop_control:
+    loop_var: machineset
+

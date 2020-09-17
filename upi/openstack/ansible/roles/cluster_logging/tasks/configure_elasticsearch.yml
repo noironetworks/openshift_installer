@@ -1,0 +1,33 @@
+- name: wait for elasticsearch secret to be present
+  k8s_info:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    kind: Secret
+    api_version: v1
+    name: elasticsearch
+    namespace: "{{ clo_cluster_logging_namespace }}"
+  register: clo_elasticsearch_secret
+  until: clo_elasticsearch_secret.resources | length > 0
+  retries: 100
+  delay: 3
+
+- set_fact:
+    clo_elasticsearch_ca_cert: "{{ clo_elasticsearch_secret.resources[0].data['admin-ca'] | b64decode }}"
+
+- name: ensure re-encrypt route for elasticsearch is present
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    definition:
+      apiVersion: route.openshift.io/v1
+      kind: Route
+      metadata:
+        name: elasticsearch
+        namespace: "{{ clo_cluster_logging_namespace }}"
+      spec:
+        host:
+        to:
+          kind: Service
+          name: elasticsearch
+        tls:
+          termination: reencrypt
+          destinationCACertificate: |
+            {{ clo_elasticsearch_ca_cert }}

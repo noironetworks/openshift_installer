@@ -1,0 +1,48 @@
+---
+- name: ensure we set alternatives for python to not have to modify scripts from docs
+  alternatives:
+    name: python
+    path: /usr/bin/python3
+  become: True
+
+- import_tasks: test.yaml
+
+  #- import_tasks: create-ignitions.yaml
+
+  #- import_tasks: security-groups.yaml
+  #- import_tasks: network.yaml
+  #- import_tasks: bootstrap.#yaml
+  #- import_tasks: controlplane.yaml
+  #
+  #
+  #- import_tasks: 01_security-groups.yaml
+  #- import_tasks: 02_network.yaml
+  #- import_tasks: 021_network.yaml
+  #- name: ensure any old bootstrap ignition file is removed
+  #  os_image:
+  #  name: "bootstrap_ignition"
+  #  container_format: bare
+  #  disk_format: qcow2
+  #  state: absent
+    #ignore_errors: true
+
+  #- name: ensure bootstrap ignition file is uploaded as image
+  #os_image:
+  #  name: "bootstrap_ignition"
+  #  container_format: bare
+  #  disk_format: qcow2
+  #  state: present
+  #  filename: "{{ ansible_user_dir }}/openshift-{{ clustername }}/bootstrap.ign"
+  #register: osp_bootstrap_image_result
+  #  ignore_errors: true
+  #- import_tasks: 03_bootstrap.yaml
+  #- import_tasks: 04_control-plane.yaml
+  #- import_tasks: 05_compute-nodes.yaml
+  #- import_tasks: cluster_snat_policy.yaml
+  #- import_tasks: complete-bootstrap.yaml
+  #- import_tasks: complete-install.yaml
+  #
+  #- import_tasks: down-01_security-groups.yaml   
+  #- import_tasks: down-02_network.yaml      
+  #- import_tasks: down-03_bootstrap.yaml   
+  #- import_tasks: down-04_control-plane.yaml 

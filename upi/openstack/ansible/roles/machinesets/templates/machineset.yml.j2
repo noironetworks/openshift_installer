@@ -1,0 +1,70 @@
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  labels:
+    machine.openshift.io/cluster-api-cluster: {{ machineset_cluster_id }}
+    machine.openshift.io/cluster-api-machine-role: {{ machineset.type }}
+    machine.openshift.io/cluster-api-machine-type: {{ machineset.type }}
+  name: {{ machineset_cluster_id }}-{{ machineset.type }}
+  namespace: openshift-machine-api
+spec:
+  replicas: {{ machineset.replicas }}
+  selector:
+    matchLabels:
+      machine.openshift.io/cluster-api-cluster: {{ machineset_cluster_id }}
+      machine.openshift.io/cluster-api-machineset: {{ machineset_cluster_id }}-{{ machineset.type }}
+  template:    
+    metadata:
+      labels:
+        machine.openshift.io/cluster-api-cluster: {{ machineset_cluster_id }}
+        machine.openshift.io/cluster-api-machine-role: {{ machineset.type }}
+        machine.openshift.io/cluster-api-machine-type: {{ machineset.type }}
+        machine.openshift.io/cluster-api-machineset: {{ machineset_cluster_id }}-{{ machineset.type }}
+    spec:
+      metadata:
+        labels:
+          node-role.kubernetes.io/{{ machineset.type }}: ""
+{% if machineset.type not in ["infra", "worker"] %}
+          node-role.kubernetes.io/infra: ""
+{% endif %}
+      providerSpec:
+        value:
+          cloudName: openstack
+          networks:
+            - filter: {}
+              subnets:
+                - filter:
+                    name: {{ machineset_cluster_id }}-nodes
+                    tags: openshiftClusterID={{ machineset_cluster_id }}
+          rootVolume:
+            deviceType: ""
+            diskSize: {{ machineset.rootdisk_size }}
+            sourceType: image
+            sourceUUID: {{ cloud.project.rhcos_image_name }}
+            volumeType: {{ osp_default_volume_type }}
+          userDataSecret:
+            name: worker-user-data
+          cloudsSecret:
+            name: openstack-cloud-credentials
+            namespace: openshift-machine-api
+          serverMetadata:
+            Name: {{ machineset_cluster_id }}-{{ machineset.type }}
+            openshiftClusterID: {{ machineset_cluster_id }}
+          securityGroups:
+            - filter: {}
+              name: {{ machineset_cluster_id }}-worker
+          kind: OpenstackProviderSpec
+          tags:
+            - openshiftClusterID={{ machineset_cluster_id }}
+          image: {{ cloud.project.rhcos_image_name }}
+          apiVersion: openstackproviderconfig.openshift.io/v1alpha1
+          flavor: {{ machineset.flavor }}
+{% if machineset.type != "worker" %}          
+      taints:
+        - effect: NoSchedule
+          key: {{ machineset.type }}
+          value: reserved
+        - effect: NoExecute
+          key: {{ machineset.type }}
+          value: reserved
+{% endif %}

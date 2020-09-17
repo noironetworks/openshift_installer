@@ -1,0 +1,83 @@
+apiVersion: "logging.openshift.io/v1"
+kind: "ClusterLogging"
+metadata:
+  name: "instance"
+  namespace: "{{ clo_cluster_logging_namespace }}"
+spec:
+  managementState: "Managed"
+  logStore:
+    type: "elasticsearch"
+    elasticsearch:
+      nodeCount: {{ machinesets | selectattr( 'type', 'equalto', 'logging' ) | map(attribute='replicas') | first }}
+      nodeSelector:
+        {{ clo_node_selector }}
+      tolerations:
+      - key: "logging"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 6000
+      - key: "logging"
+        operator: "Exists"
+        effect: "NoSchedule"
+      resources:
+        limits:
+          memory: 8Gi
+        requests:
+          cpu: 100m
+          memory: 1Gi
+      storage:
+        storageClassName: "{{ clo_elasticsearch_storage_class }}"
+        size: "{{ clo_elasticsearch_storage_size}}"
+      redundancyPolicy: "{{ clo_elasticsearch_index_redundancy }}"
+  visualization:
+    type: "kibana"
+    kibana:
+      nodeSelector:
+        {{ clo_node_selector }}
+      tolerations: 
+      - key: "logging"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 6000
+      - key: "logging"
+        operator: "Exists"
+        effect: "NoSchedule"
+      resources:
+        limits:
+          memory: 2Gi
+        requests:
+          cpu: 100m
+          memory: 1Gi
+      replicas: 1
+  curation:
+    type: "curator"
+    curator:
+      nodeSelector:
+        {{ clo_node_selector }}
+      tolerations: 
+      - key: "logging"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 6000
+      - key: "logging"
+        operator: "Exists"
+        effect: "NoSchedule"
+      resources:
+        limits:
+          memory: 200Mi
+        requests:
+          cpu: 100m
+          memory: 100Mi
+      schedule: "{{ clo_curator_scheduled_crontab }}"
+  collection:
+    logs:
+      type: "fluentd"
+      fluentd:
+        tolerations:
+        - operator: Exists           
+        resources:
+          limits:
+            memory: 2Gi
+          requests:
+            cpu: 100m
+            memory: 1Gi

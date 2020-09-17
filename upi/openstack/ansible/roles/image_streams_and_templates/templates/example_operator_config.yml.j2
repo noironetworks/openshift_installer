@@ -1,0 +1,17 @@
+apiVersion: samples.operator.openshift.io/v1
+kind: Config
+metadata:
+  name: cluster
+spec:
+  architectures:
+  - x86_64
+  managementState: {{ samples_operator.state }}
+  skippedImagestreams:
+{% for skipped_imagestream in samples_operator.skipped_imagestreams %}
+  - {{ skipped_imagestream }}
+{% endfor %}
+  skippedTemplates:
+{% for skipped_template in samples_operator.skipped_templates %}
+  - {{ skipped_template }}
+{% endfor %}
+

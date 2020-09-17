@@ -1,0 +1,89 @@
+
+- name: create manifests
+  command: "openshift-install create manifests --dir=openshift-{{ openshift.cluster.clustername }} --log-level=debug"
+
+- name: get master api manifest
+  find:
+    paths: "{{ ansible_user_dir }}/openshift-{{ openshift.cluster.clustername }}/openshift"
+    patterns: '99_openshift-cluster-api_master-machines-*.yaml'
+  register: ocp_manifests_master_api
+- name: remove master api machine manifests
+  file:
+    state: absent
+    path: "{{ item.path }}"
+  loop: "{{ ocp_manifests_master_api.files }}"
+
+- name: get worker machineset manifest
+  find:
+    paths: "{{ ansible_user_dir }}/openshift-{{ openshift.cluster.clustername }}/openshift"
+    patterns: '99_openshift-cluster-api_worker-machineset-*.yaml'
+  register: ocp_manifests_worker_machinesets
+- name: fix image name to be used in order to use worker machinesets right away
+  lineinfile:
+    path: "{{ item.path }}"
+    regexp: '(\s+)sourceUUID: .+'
+    line: '\1sourceUUID: {{ cloud.project.rhcos_image_name }}'
+    backrefs: yes
+  loop: "{{ ocp_manifests_worker_machinesets.files }}"
+
+- name: mark masters as schedulable=false
+  lineinfile:
+    path: "{{ ansible_user_dir }}/openshift-{{ openshift.cluster.clustername }}/manifests/cluster-scheduler-02-config.yml"
+    regexp: '(\s+)mastersSchedulable: .+'
+    line: '\1mastersSchedulable: false'
+    backrefs: yes
+
+- name: create ignition files
+  command: "openshift-install create ignition-configs --dir=openshift-{{ openshift.cluster.clustername }} --log-level=debug"
+ 
+- name: get infrastructure id
+  shell: "jq -r .infraID metadata.json"
+  args:
+    chdir: "{{ ansible_user_dir }}/openshift-{{ openshift.cluster.clustername }}"
+  register: ocp_infra_id_result
+- name: set infrastructure id
+  set_fact:
+    ocp_infra_id: "{{ ocp_infra_id_result.stdout }}"
+
+- name: run script to modify bootstrap ignition files to set hostname
+  script: scripts/modify_bootstrap_ignition_set_hostname.py
+  args:
+    chdir: "{{ ansible_user_dir }}/openshift-{{ openshift.cluster.clustername }}"
+    executable: /usr/bin/python3
+  environment:
+    INFRA_ID: "{{ ocp_infra_id }}"
+  when: 1==2
+
+- name: ensure any old bootstrap ignition file is removed
+  os_image:
+    name: "bootstrap_ignition"
+    container_format: bare
+    disk_format: qcow2
+    state: absent
+    #ignore_errors: true
+
+- name: ensure bootstrap ignition file is uploaded as image
+  os_image:
+    name: "bootstrap_ignition"
+    container_format: bare
+    disk_format: qcow2
+    state: present
+    filename: "{{ ansible_user_dir }}/openshift-{{ clustername }}/bootstrap.ign"
+  register: osp_bootstrap_image_result
+  when: 1==2
+  #  ignore_errors: true
+
+- name: create secondary bootstrap file
+  template:
+    src: bootstrap-secondary-ignition.json.j2 
+    dest: "{{ ansible_user_dir }}/openshift-{{ clustername }}/{{ ocp_infra_id }}-bootstrap-ignition.json"
+  ignore_errors: true 
+  when: 1==2
+
+- name: create control plane ignition files
+  script: scripts/create-ignitions-master.sh
+  args:
+    chdir: "{{ ansible_user_dir }}/openshift-{{ clustername }}"
+  environment:
+    INFRA_ID: "{{ ocp_infra_id }}"
+  when: 1==2

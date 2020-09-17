@@ -1,0 +1,32 @@
+---
+- name: Get  project info
+  uri:
+    url: "{{ cloud.openstack.endpoint }}/users/{{ os_userid }}/projects"
+    method: GET
+    status_code: 200
+    headers:
+      X-Auth-Token: "{{ os_token }}"
+  register: get_projects
+
+- name: Get osp_projects for user {{ cloud.user.name }}
+  set_fact:
+    osp_projects: "{{ get_projects.json.projects }}"
+
+- name: Fail when more than one project with the same name project name exists
+  fail:
+    msg: >
+       "ERROR: There are {{ (osp_projects|selectattr('name', 'contains',cloud.project.name)| list | length ) }} projects 
+        with same project name: {{ cloud.project.name }}"
+  when: " (osp_projects|selectattr('name', 'contains',cloud.project.name)| list | length )  > 1"
+
+- name: Fail when not project {{ cloud.project.name }} for user {{ cloud.user.name }} exists
+  fail:
+    msg: >
+       "ERROR: There is not project {{ cloud.project.name }} for user {{ cloud.user.name }} 
+        with same project name: {{ cloud.project.name }}"
+  when: " (osp_projects|selectattr('name', 'contains',cloud.project.name)| list | length )  < 1"
+
+- name: Set osp_project_id_run 
+  set_fact:
+    osp_project_id_run: "{{ ( osp_projects | selectattr('name', 'contains', cloud.project.name )| first ).id }}"
+

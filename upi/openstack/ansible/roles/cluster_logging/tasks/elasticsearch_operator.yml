@@ -1,0 +1,51 @@
+- name: ensure operator group for elastic search exists
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    state: present
+    definition:
+      apiVersion: operators.coreos.com/v1
+      kind: OperatorGroup
+      metadata:
+        name: "{{ clo_elasticsearch_operator_namespace }}"
+        namespace: "{{ clo_elasticsearch_operator_namespace }}"
+      spec: {}
+
+- name: get existing subscriptions in cluster logging namespace
+  k8s_info:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    kind: Subscription
+    api_version: operators.coreos.com/v1alpha1
+    namespace: "{{ clo_elasticsearch_operator_namespace }}"
+  register: existing_subscriptions_es_namespace
+
+- name: check if elasticsearch subscription already exists
+  set_fact:
+    es_sub_exists: "{{ (existing_subscriptions_es_namespace | json_query('resources[*].metadata.generateName')  is search('elasticsearch-'))}}"
+
+# we generate names, so we dont have the attribute 'name' -> k8s doesnt handle that case
+# oc apply also needs a name. only create handles it properly
+- name: ensure subscription for elastic search operator exists
+  shell: "echo \"{{ lookup('template', 'es_operator_subscription.yml.j2') }}\" | oc --config={{ postinstall_kubeconfig }} create -f -"
+  when: es_sub_exists != True
+
+- name: ensure openshift-ansible folder exists to store copied files
+  file:
+    state: directory
+    path: "{{ openshift.config.folder }}"  
+
+- name: ensure role and rolebinding files are copied to bastion host
+  copy:
+    src: "{{ role_path }}/files/{{ item }}"
+    dest: "{{ openshift.config.folder }}/"
+  loop:
+    - rbac_role_prometheus.yml
+    - rbac_rolebinding_prometheus.yml
+
+- name: ensure prometheus has access to cluster logging namespace
+  k8s:
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    src: "{{ openshift.config.folder }}/{{ item }}"
+    state: present
+  loop:
+    - rbac_role_prometheus.yml
+    - rbac_rolebinding_prometheus.yml

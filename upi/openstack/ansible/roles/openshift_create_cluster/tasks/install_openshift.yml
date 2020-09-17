@@ -1,0 +1,50 @@
+---
+- name: get FIP for API
+  block:
+          #  - import_tasks: get_floating_ip_by_description.yml
+          #vars:
+          # fip_description: "{{ openshift_fip_api_description }}"
+  - set_fact:
+      os_api_fip: 60.60.60.140
+
+- name: get FIP for Ingress
+  block:
+          # - import_tasks: get_floating_ip_by_description.yml
+    #   vars:
+            #  fip_description: "{{ openshift_fip_ingress_description }}"
+  - set_fact:
+      os_ingress_fip: 60.60.60.108
+
+- name: ensure api entry is in /etc/hosts
+  lineinfile:
+    path: /etc/hosts
+    line: "{{ os_api_fip }} api.{{ openshift.cluster.clustername }}.{{ openshift.cluster.basedomain }}"
+    regexp: '^.*\s+api\.{{ openshift.cluster.clustername }}.*$'
+    owner: root
+    group: root
+    mode: '0644'
+    state: present
+  become: true
+
+- name: ensure install-config.yaml file exists
+  template:
+    dest: "openshift-{{ openshift.cluster.clustername }}/install-config.yaml"
+    src: "install-config.yaml.j2"
+    mode: "0640"
+
+- name: OpenShift IPI Installation
+  block: 
+    - name: start openshift installation
+      command: "openshift-install create cluster --dir=openshift-{{ openshift.cluster.clustername }} --log-level=debug"
+  tags:
+    - ocp_install
+  when:
+  - (openshift_installation_method | upper) != 'UPI'
+
+- name: run OpenShift UPI installation
+  import_role:
+    name: openshift_upi
+  tags:
+    - ocp_install
+  when:
+  - (openshift_installation_method | upper) == 'UPI'

@@ -1,0 +1,48 @@
+- name: Handle Azure AD OIDC
+  block:
+    - name: Create azure ad client secret
+      k8s:
+        kubeconfig: "{{ postinstall_kubeconfig }}"
+        definition:
+          kind: Secret
+          apiVersion: v1
+          data:
+            clientSecret: "{{ identity_providers.oidc.password | b64encode }}"
+          metadata:
+            name: azuread-clientsecret
+            namespace: openshift-config
+          type: Opaque
+        state: present
+    - name: Create Azure AD OIDC identity provider template
+      set_fact:
+        azure_ad_oidc:
+          openID:
+            clientID: "{{ identity_providers.oidc.client_id }}"
+            clientSecret:
+              name: azuread-clientsecret
+            claims:
+              preferredUsername:
+              - upn
+              name:
+              - name
+              email:
+              - email
+            issuer: "{{ identity_providers.oidc.issuer_url }}"
+          mappingMethod: claim
+          name: azuread-oidc
+          type: OpenID
+    - name: Push azure oidc to to identity_providers list
+      set_fact:
+        identity_providers_list: "{{ identity_providers_list }} + [ {{ azure_ad_oidc }} ]"
+
+- name: Configure identity providers
+  k8s:
+    state: present
+    kubeconfig: "{{ postinstall_kubeconfig }}"
+    definition:
+        apiVersion: config.openshift.io/v1
+        kind: OAuth
+        metadata:
+          name: cluster
+        spec:
+          identityProviders: "{{ identity_providers_list }}"

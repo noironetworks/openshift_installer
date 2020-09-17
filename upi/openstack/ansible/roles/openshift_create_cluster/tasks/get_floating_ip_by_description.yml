@@ -1,0 +1,37 @@
+---
+
+- set_fact:
+    osp_fip_found: ""
+
+- name: Get floating ip list via REST API
+  uri:
+    url: "{{ osp_neutron_endpoint }}/v2.0/floatingips"
+    method: GET
+    status_code: 200
+    headers:
+      X-Auth-Token: "{{ os_token }}"
+  register: get_fips
+
+- name: Get fips 
+  set_fact:
+    osp_fips: "{{ get_fips.json.floatingips }}"
+
+- name: check for an existing FIP for by description
+  set_fact:
+    osp_fip_found: "{{ item.floating_ip_address }}"
+  loop: "{{ osp_fips }}"
+  when:
+    - item.fixed_ip_address is not defined or item.fixed_ip_address is none
+    - item.description == fip_description
+
+- name: ensure FIP is created
+  command: "openstack floating ip create sauto_l3out-2 --description 'FIP created by jumphost' -c 'floating_ip_address' -f value"
+  register: get_fip_created
+  when:
+    - osp_fip_found == ""
+
+- set_fact:
+    osp_fip_found: "{{ get_fip_created.stdout }}"
+  when:
+    - osp_fip_found == ""
+  

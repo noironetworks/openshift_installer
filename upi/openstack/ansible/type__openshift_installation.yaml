@@ -1,0 +1,56 @@
+---
+#- name: Load auth environemnt for openstack
+#  hosts: controllernode
+#  gather_facts: no
+#  tags: always
+#  roles:
+#    - role: openstack_auth
+
+- name: Create needed Resources in Openstack and boot a bastion host
+  hosts: controllernode
+  become: False
+  gather_facts: no
+  tags: always
+  roles:
+    - role: openshift_create_cluster
+      action: create_jumphost
+
+      #'''- name: Configure ACI network settings for OCP Cluster
+#  hosts: "bastion"
+#  become#: False
+#  gather_facts: yes
+  #  tasks:
+          # - block:
+            #      - import_role:
+              #name: cisco_aci_acc_provision
+          #    - import_role:
+          #  name: cisco_aci_preconfig
+          #  - import_role:
+          #    #name: cisco_aci_config
+          #     when:
+              #   - openshift_use_cisco_aci_cni is not defined or (openshift_use_cisco_aci_cni | bool) == True
+          #  tags: ocp_aci_automation
+- name: Configure Bastion and start Boostrapping of the OCP Cluster
+  hosts: "bastion"
+  become: False
+  gather_facts: no
+  environment:
+    OS_NO_CACHE: True
+    COMPUTE_API_VERSION: 1.1
+    OS_USERNAME: "{{ cloud.user.name }}"
+    OS_USER_DOMAIN_NAME: "{{ cloud.user.domain }}"
+    OS_VOLUME_API_VERSION: 3
+    OS_AUTH_URL: "{{ cloud.openstack.endpoint }}"
+    NOVA_VERSION: 1.1
+    OS_IMAGE_API_VERSION: 2
+    OS_PASSWORD: "{{ cloud_user_password }}"
+    OS_PROJECT_DOMAIN_NAME: "{{ cloud.project.domain }}"
+    OS_INTERFACE: public
+    OS_IDENTITY_API_VERSION: 3
+    OS_PROJECT_ID: "{{ osp_project_id | default('') }}"
+    OS_AUTH_TYPE: password
+    OS_CACERT: "{{ ansible_user_dir }}/redacted_root_ca.pem"
+    PYTHONWARNINGS: "ignore:Certificate has no, ignore:A true SSLContext object is not available"
+  roles:
+    - role: openshift_create_cluster
+      action: configure_jumphost

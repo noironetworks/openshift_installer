@@ -1,0 +1,8 @@
+- name: Disable cluster insights reporting sending data to RedHat
+  shell: "{{ item }}"
+  with_items:
+    - oc extract secret/pull-secret -n openshift-config --to=. --confirm
+    - sed -i.bak 's/\"cloud.openshift.com\":{\"auth\":\"[a-zA-Z0-9=+\/]\+\",\"email\":\"[a-zA-Z0-9.]\+@[a-zA-Z0-9.]\+\"},//g' .dockerconfigjson
+    - oc set data secret/pull-secret -n openshift-config --from-file=.dockerconfigjson=.dockerconfigjson
+    - rm -f .dockerconfigjson
+    - chmod 700 .dockerconfigjson.bak

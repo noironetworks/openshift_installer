@@ -1,0 +1,30 @@
+---
+#- name: Load auth environemnt for openstack
+#  hosts: controllernode
+#  gather_facts: no
+#  tags: always
+#  roles:
+#    - role: openstack_auth
+
+- name: Create needed Resources in Openstack and boot a bastion host
+  hosts: controllernode
+  become: False
+  gather_facts: no
+  tags: always
+  roles:
+    - role: openshift_create_cluster
+      action: create_jumphost
+
+- name: Configure ACI network settings for OCP Cluster
+  hosts: "bastion"
+  become: False
+  gather_facts: yes
+  tasks:
+    - block:
+      - import_role:
+          name: cisco_aci_acc_provision
+      - import_role:
+          name: cisco_aci_preconfig
+      when:
+        - openshift_use_cisco_aci_cni is not defined or (openshift_use_cisco_aci_cni | bool) == True
+  tags: ocp_aci_automation

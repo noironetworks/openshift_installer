@@ -1,0 +1,44 @@
+- name: Store needed files from Openshift controller node
+  copy:
+    src: /data/ansible/cisco
+    dest: /tmp
+    mode: 0750
+  tags:
+    - acc-provision
+    - acc-prov_fetch
+
+- name: unpack acc-provision rpm package
+  unarchive:
+    src: /tmp/cisco/{{ acc_prov_image }}
+    dest: /tmp/cisco
+    mode: 0750
+    remote_src: yes
+  tags:
+    - acc-provision
+    - acc-prov_unpack
+  ignore_errors: true
+
+- name: find rpm name - wildcard
+  find:
+    paths: /tmp/cisco/
+    patterns: "acc-provision*.rpm"
+  register: wildcard_rpm_name
+
+- name: install the acc-provision rpm package
+  become: true
+  yum:
+    name:
+      - "{{ wildcard_rpm_name.files[0].path }}"
+    state: present
+  tags:
+    - acc-provision
+    - acc-prov_install
+  ignore_errors: true
+
+- name: Delete file from tmp
+  file:
+    path: /tmp/cisco/
+    state: absent
+  tags:
+    - acc-provision
+    - acc-prov_remove_file

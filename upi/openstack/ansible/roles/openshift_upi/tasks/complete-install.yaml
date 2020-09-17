@@ -1,0 +1,5 @@
+---
+- name: wait for installation to complete
+  shell: "openshift-install --log-level debug wait-for install-complete"
+  args:
+    chdir: "{{ ansible_user_dir }}/openshift-{{ clustername }}"

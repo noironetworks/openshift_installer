@@ -1,0 +1,48 @@
+---
+- name: Download openshift index
+  get_url:
+    url: "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest-{{ openshift.cluster.openshiftVersion }}/sha256sum.txt"
+    dest: "/tmp/"
+  environment:
+    http_proxy: "{{ proxy }}"
+    https_proxy: "{{ proxy }}"
+  tags:
+    - download_ocp_binaries
+
+- name: Slurp sha256sum.txt
+  slurp:
+    src: /tmp/sha256sum.txt
+  register: indexfile
+  tags:
+    - download_ocp_binaries
+
+- name: get packages
+  set_fact:
+    packages: "{{ indexfile['content'] | b64decode | regex_findall('openshift.*linux.*') }}"
+  tags:
+    - download_ocp_binaries
+
+- name: Download and extract openshift clients
+  unarchive:
+    src: "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest-{{ openshift.cluster.openshiftVersion }}/{{ item }}"
+    dest: "/usr/local/bin"
+    remote_src: true
+  become: true
+  environment:
+    http_proxy: "{{ proxy }}"
+    https_proxy: "{{ proxy }}"
+  loop: "{{ packages }}"
+  tags:
+    - download_ocp_binaries
+  when: 1==2
+
+- name: SDDC-3075 - ensure cisco openshift-install binary is there
+  copy:
+    src: /data/ansible/cisco/openshift-install
+    dest: /usr/local/bin/openshift-install
+  become: true
+  when:
+    - openshift_use_cisco_aci_cni is not defined or (openshift_use_cisco_aci_cni | bool) == True
+    - (openshift_installation_method | upper) != 'UPI'
+  tags:
+    - download_ocp_binaries

@@ -1,0 +1,5 @@
+- name: update to target micro version
+  include_tasks: cluster_upgrade.yml
+  when: cluster_upgrade.microversion_target is defined
+  vars:
+    target_version: "{{ cluster_upgrade.microversion_target }}"    

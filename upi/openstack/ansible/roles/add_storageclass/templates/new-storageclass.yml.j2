@@ -1,0 +1,12 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: {{ storageclass_item.name }}
+  annotations:
+    storageclass.kubernetes.io/is-default-class: '{{ storageclass_item.is_default }}'
+    #storageclass.kubernetes.io/is-default-class: 'true'
+provisioner: kubernetes.io/cinder
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+parameters:
+  type: {{ storageclass_item.volume_type }}

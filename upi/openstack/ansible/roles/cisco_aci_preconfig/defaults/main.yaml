@@ -1,0 +1,6 @@
+acc_preconfig_manifest_file_name: acc_provision_input.yaml
+acc_provisioning_out_file_name: aci_deployment.yaml
+ansible_user_dir: /home
+ocp_version: 4.4-openstack
+aci_user: admin
+aci_password: noir0123

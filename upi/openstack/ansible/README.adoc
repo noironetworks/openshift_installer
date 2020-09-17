@@ -1,0 +1,2 @@
+This repository has been created for the OCP4 project at redacted, which is currently part of the https://s-a-0000007.bpc-mgmt.bgn/sddc-software-defined-data-center/redacted-private-cloud[redacted SDDC project].
+* Find the link:docs[docs]

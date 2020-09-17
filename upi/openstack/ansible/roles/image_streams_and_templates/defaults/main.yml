@@ -1,0 +1,94 @@
+samples_operator:
+  state: Managed
+  skipped_imagestreams:
+    - apicast-gateway
+    - apicurito-ui
+    - fis-java-openshift
+    - fis-karaf-openshift
+    - fuse-apicurito-generator
+    - fuse7-console
+    - fuse7-eap-openshift
+    - fuse7-java-openshift
+    - fuse7-karaf-openshift
+    - jboss-amq-62
+    - jboss-amq-63
+    - jboss-datavirt64-driver-openshift
+    - jboss-datavirt64-openshift
+    - jboss-decisionserver64-openshift
+    - jboss-fuse70-console
+    - jboss-fuse70-eap-openshift
+    - jboss-fuse70-java-openshift
+    - jboss-fuse70-karaf-openshift
+    - jboss-processserver64-openshift
+    - rhdm74-decisioncentral-openshift
+    - rhdm74-kieserver-openshift
+    - rhdm74-optaweb-employee-rostering-openshift
+    - rhpam74-businesscentral-monitoring-openshift
+    - rhpam74-businesscentral-openshift
+    - rhpam74-kieserver-openshift
+    - rhpam74-smartrouter-openshift
+  skipped_templates:
+    - 3scale-gateway
+    - amq63-basic
+    - amq63-persistent
+    - amq63-persistent-ssl
+    - amq63-ssl
+    - apicurito
+    - datavirt64-basic-s2i
+    - datavirt64-extensions-support-s2i
+    - datavirt64-ldap-s2i
+    - datavirt64-secure-s2i
+    - decisionserver64-amq-s2i
+    - decisionserver64-basic-s2i
+    - fuse74-console
+    - processserver64-amq-mysql-persistent-s2i
+    - processserver64-amq-mysql-s2i
+    - processserver64-amq-postgresql-persistent-s2i
+    - processserver64-amq-postgresql-s2i
+    - processserver64-basic-s2i
+    - processserver64-externaldb-s2i
+    - processserver64-mysql-persistent-s2i
+    - processserver64-mysql-s2i
+    - processserver64-postgresql-persistent-s2i
+    - rhdm74-authoring
+    - rhdm74-authoring-ha
+    - rhdm74-kieserver
+    - rhdm74-optaweb-employee-rostering
+    - rhdm74-prod-immutable-kieserver
+    - rhdm74-prod-immutable-kieserver-amq
+    - rhdm74-trial-ephemeral
+    - rhpam74-authoring
+    - rhpam74-authoring-ha
+    - rhpam74-kieserver-externaldb
+    - rhpam74-kieserver-mysql
+    - rhpam74-kieserver-postgresql
+    - rhpam74-managed
+    - rhpam74-prod
+    - rhpam74-prod-immutable-kieserver
+    - rhpam74-prod-immutable-kieserver-amq
+    - rhpam74-prod-immutable-monitor
+    - rhpam74-trial-ephemeral
+    - s2i-fuse74-spring-boot-camel
+    - s2i-fuse74-spring-boot-camel-rest-3scale
+    - s2i-fuse74-spring-boot-camel-xml
+
+redacted_image_streams:
+  - name: redacted-eap73-openjdk11-openshift-rhel8
+    source_registry_repo: registry.redhat.io/jboss-eap-7/eap73-openjdk11-openshift-rhel8
+  - name: redacted-eap73-openjdk8-openshift-rhel7
+    source_registry_repo: registry.redhat.io/jboss-eap-7/eap73-openjdk8-openshift-rhel7
+  - name: redacted-webserver31-tomcat8-openshift
+    source_registry_repo: registry.redhat.io/jboss-webserver-3/webserver31-tomcat8-openshift
+  - name: redacted-webserver53-openjdk8-tomcat9-openshift-rhel7
+    source_registry_repo: registry.redhat.io/jboss-webserver-5/webserver53-openjdk8-tomcat9-openshift-rhel7
+  - name: redacted-webserver53-openjdk11-tomcat9-openshift-rhel7
+    source_registry_repo: registry.redhat.io/jboss-webserver-5/webserver53-openjdk11-tomcat9-openshift-rhel7
+    
+redacted_templates:
+  - name: redacted-eap-jboss73-basic-s2i-redacted
+    file: files/redacted-eap-jboss73-basic-s2i-redacted.yaml
+  - name: redacted-jws-tomcat8-basic-s2i-redacted
+    file: files/redacted-jws-tomcat8-basic-s2i-redacted.yaml
+  - name: redacted-jws-tomcat9-basic-s2i-redacted
+    file: files/redacted-jws-tomcat9-basic-s2i-redacted.yaml
+

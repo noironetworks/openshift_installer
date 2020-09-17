@@ -1,0 +1,14 @@
+---
+- name: export kubeconfig in bashrc
+  lineinfile:
+    path: "{{ ansible_user_dir }}/.bashrc"
+    state: present
+    line: "export KUBECONFIG={{ ansible_user_dir }}/openshift-{{ openshift.cluster.clustername }}/auth/kubeconfig"
+    create: true
+
+- name: ensure oc bash completion is in bashrc
+  lineinfile:
+    path: "{{ ansible_user_dir }}/.bashrc"
+    state: present
+    line: "source <(oc completion bash)"
+    create: true

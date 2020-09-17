@@ -1,0 +1,15 @@
+new_project_projectname: ci-zz-default-project
+
+new_project_costcenter: 000000
+new_project_hostingtype: standard
+new_project_projectsize: 1
+
+new_project_default_cpu: "140m"
+new_project_default_ram: "256Mi"
+new_project_default_request_cpu: "17m"
+new_project_default_request_ram: "128Mi"
+
+new_project_networkpolicy:
+  ingresslabel: ingress
+
+dialog_user: dialog_deployer

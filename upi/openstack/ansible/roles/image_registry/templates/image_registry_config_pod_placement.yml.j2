@@ -1,0 +1,14 @@
+apiVersion: imageregistry.operator.openshift.io/v1
+kind: Config
+metadata:
+  name: cluster
+spec:
+  nodeSelector: 
+    {{ image_registry.node_selector }}
+  tolerations:
+  - effect: NoSchedule
+    operator: Exists
+    key: {{ image_registry.tolerations_key }}
+  - effect: NoExecute
+    operator: Exists
+    key: {{ image_registry.tolerations_key }} 

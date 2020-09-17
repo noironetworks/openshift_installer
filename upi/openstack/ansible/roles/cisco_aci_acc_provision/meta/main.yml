@@ -1,0 +1,3 @@
+---
+dependencies:
+  - role: configure_yum_repo_proxy

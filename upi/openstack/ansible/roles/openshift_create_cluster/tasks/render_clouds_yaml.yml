@@ -1,0 +1,15 @@
+---
+- name: ensure openstack default config directory exists
+  file:
+    path: "{{ ansible_user_dir }}/.config/.openstack"
+    state: directory
+    recurse: True
+
+- name: ensure clouds.yaml is rendered
+  template:
+    dest: "clouds.yaml"
+    src: "clouds.yaml.j2"
+    mode: 0640
+  loop:
+    - "{{ ansible_user_dir }}/clouds.yaml"
+    - "{{ ansible_user_dir }}/.config/.openstack/clouds.yaml"

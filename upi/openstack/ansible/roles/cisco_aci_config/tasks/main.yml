@@ -1,0 +1,325 @@
+---
+  - name: "Login ACI"
+    uri:
+      url: "https://{{apic_hosts_ip}}/api/aaaLogin.json"
+      method: POST
+      body_format: json
+      validate_certs: no
+      headers:
+        Accept: 'application/json'
+      body:
+        aaaUser:
+          attributes:
+            name: "{{ aci_user }}"
+            pwd: "{{ aci_password }}"
+      status_code: 200
+      return_content: yes
+    register: aci_login
+
+
+  - name: "Change POD-Network Scope to private"
+    uri:
+      url: "https://{{ apic_hosts_ip }}/api/mo/uni.json"
+      method: POST
+      body_format: json
+      validate_certs: no
+      headers:
+        Cookie: "{{ aci_login.set_cookie }}"
+        Accept: 'application/json'
+      body:
+        fvSubnet:
+          attributes:
+            dn: "uni/tn-{{ tenant }}/BD-aci-containers-{{ clustername }}-pod-bd/subnet-[{{ openshift_pod_subnet }}]"
+            scope: "private"
+      return_content: yes
+      status_code: [200]
+    register: aci_rest_call_result
+
+  - name: "Change Node-Network Scope to public,shared"
+    uri:
+      url: "https://{{ apic_hosts_ip }}/api/mo/uni.json"
+      method: POST
+      body_format: json
+      validate_certs: no
+      headers:
+        Cookie: "{{ aci_login.set_cookie }}"
+        Accept: 'application/json'
+      body:
+        fvSubnet:
+          attributes:
+            dn: "uni/tn-{{ tenant }}/BD-aci-containers-{{ clustername }}-node-bd/subnet-[{{ openshift_node_subnet }}]"
+            scope: "public,shared"
+      return_content: yes
+      status_code: [200]
+    register: aci_rest_call_result
+    when: 1==0
+
+  - name: "Add PER-SVC_L3OUT Contract (Proxy)"
+    uri:
+      url: "https://{{ apic_hosts_ip }}/api/mo/uni.json"
+      method: POST
+      body_format: json
+      validate_certs: no
+      headers:
+        Cookie: "{{ aci_login.set_cookie }}"
+        Accept: 'application/json'
+      body:
+        fvRsCons:
+          attributes:
+            dn: "uni/tn-{{ tenant }}/ap-aci-containers-{{ clustername }}/epg-aci-containers-nodes/rscons-PER-SVC_L3OUT_BIC-SVC_CON"
+            tnVzBrCPName: "PER-SVC_L3OUT_BIC-SVC_CON"
+            status: "created,modified"
+      return_content: yes
+      status_code: [200]
+    register: aci_rest_call_result
+
+
+  - name: "Assign APIC-API contract to node EPG"
+    uri:
+      url: "https://{{ apic_hosts_ip }}/api/mo/uni.json"
+      method: POST
+      body_format: json
+      validate_certs: no
+      headers:
+        Cookie: "{{ aci_login.set_cookie }}"
+        Accept: 'application/json'
+      body:
+        fvAEPg:
+          attributes:
+            dn: "uni/tn-{{ tenant }}/ap-aci-containers-{{ clustername }}/epg-aci-containers-nodes"
+          children:
+            - fvRsCons:
+                attributes:
+                  tnVzBrCPName: "{{ contract_for_apic_api }}"
+                  status: "created,modified"
+
+            - fvRsProv:
+                attributes:
+                  tnVzBrCPName: "{{ contract_apic_api_consumer }}"
+                  status: "created,modified"
+      return_content: yes
+      status_code: [200]
+    register: aci_rest_call_result
+
+  - name: "Assign Router SH Contract to container-default EPG"
+    uri:
+      url: "https://{{ apic_hosts_ip }}/api/mo/uni.json"
+      method: POST
+      body_format: json
+      validate_certs: no
+      headers:
+        Cookie: "{{ aci_login.set_cookie }}"
+        Accept: 'application/json'
+      body:
+        fvAEPg:
+          attributes:
+            dn: "uni/tn-{{ tenant }}/ap-aci-containers-{{ clustername }}/epg-aci-containers-default"
+          children:
+            - fvRsCons:
+                attributes:
+                  tnVzBrCPName: "{{ clustername }}_svc_openshift-ingress_router-default"
+                  status: "created,modified"
+
+      return_content: yes
+      status_code: [200]
+    register: aci_rest_call_result
+
+  - name: "Add static route for SNAT Pool"
+    uri:
+      url: "https://{{ apic_hosts_ip }}/api/mo/uni.json"
+      method: POST
+      body_format: json
+      validate_certs: no
+      headers:
+        Cookie: "{{ aci_login.set_cookie }}"
+        Accept: 'application/json'
+      body:
+        l3extLNodeP:
+          attributes:
+            dn: "{{ dn_l3out_bl }}"
+          children:
+            - l3extRsNodeL3OutAtt:
+                attributes:
+                  tDn: "{{ tDn_bl_1 }}"
+                children:
+                  - ipRouteP:
+                      attributes:
+                        ip: "{{ openshift_snat_subnet }}"
+                        status: "created,modified"
+                      children:
+                        - ipNexthopP:
+                            attributes:
+                              type: "none"
+                              nhAddr: "0.0.0.0/0"
+                  - ipRouteP:
+                      attributes:
+                        ip: "{{ openshift_ext_ip_subnet }}"
+                        status: "created,modified"
+                      children:
+                        - ipNexthopP:
+                            attributes:
+                              type: "none"
+                              nhAddr: "0.0.0.0/0"
+
+            - l3extRsNodeL3OutAtt:
+                attributes:
+                  tDn: "{{ tDn_bl_2 }}"
+                children:
+                  - ipRouteP:
+                      attributes:
+                        ip: "{{ openshift_snat_subnet }}"
+                        status: "created,modified"
+                      children:
+                        - ipNexthopP:
+                            attributes:
+                              type: "none"
+                              nhAddr: "0.0.0.0/0"
+
+                  - ipRouteP:
+                      attributes:
+                        ip: "{{ openshift_ext_ip_subnet }}"
+                        status: "created,modified"
+                      children:
+                        - ipNexthopP:
+                            attributes:
+                              type: "none"
+                              nhAddr: "0.0.0.0/0"
+      return_content: yes
+      status_code: [200,400]
+    register: aci_rest_call_result
+
+  - name: "Display Error Message when deployment failed"
+    debug:
+      msg: "WARNING:{{ aci_rest_call_result.json.imdata[0].error.attributes.text }}"
+    when: aci_rest_call_result.status != 200
+
+
+  - name: create Contract, Subject and Filter in DE X Tenant for prometheus
+    uri:
+      url: "https://{{ apic_hosts_ip }}/api/mo/uni.json"
+      method: POST
+      body_format: json
+      validate_certs: no
+      headers:
+        Cookie: "{{ aci_login.set_cookie }}"
+        Accept: 'application/json'
+      body:
+        fvTenant:
+          attributes:
+            dn: "uni/tn-{{ tenant }}"
+          children:
+            - vzFilter:
+                attributes:
+                  name: "openshift-prometheus-cons-to-prov"
+                  annotation: "orchestrator:aci-containers-controller"
+                  status: "created,modified"
+                children:
+                  - vzEntry:
+                      attributes:
+                        name: "tcp_any"
+                        etherT: "ip"
+                        prot: "tcp"
+                        status: "created,modified"
+
+            - vzFilter:
+                attributes:
+                  name: "openshift-prometheus-prov-to-cons"
+                  annotation: "orchestrator:aci-containers-controller"
+                  status: "created,modified"
+                children:
+                  - vzEntry:
+                      attributes:
+                        name: "tcp_any"
+                        etherT: "ip"
+                        prot: "tcp"
+                        status: "created,modified"
+                        tcpRules: "est"
+
+            - vzBrCP:
+                attributes:
+                  name: "aci-containers-{{ clustername }}_prometheus"
+                  scope: "context"
+                  annotation: "orchestrator:aci-containers-controller"
+                  status: "created,modified"
+                children:
+                  - vzSubj:
+                      attributes:
+                        name: "aci-containers-{{ clustername }}_prometheus"
+                        revFltPorts: "no"
+                      children:
+                        - vzInTerm:
+                            attributes:
+                              annotation: ""
+                            children:
+                              - vzRsFiltAtt:
+                                  attributes:
+                                    tnVzFilterName: "openshift-prometheus-cons-to-prov"
+                                    directives: "none"
+                        - vzOutTerm:
+                            attributes:
+                              annotation: ""
+                            children:
+                              - vzRsFiltAtt:
+                                  attributes:
+                                    tnVzFilterName: "openshift-prometheus-prov-to-cons"
+                                    directives: "none"
+
+      return_content: yes
+      status_code: [200,400]
+    register: aci_rest_call_result
+
+  - name: "Display Error Message when deployment failed"
+    debug:
+      msg: "WARNING:{{ aci_rest_call_result.json.imdata[0].error.attributes.text }}"
+    when: aci_rest_call_result.status != 200
+
+  - name: assign contract to EPGs
+    uri:
+      url: "https://{{ apic_hosts_ip }}/api/mo/uni.json"
+      method: POST
+      body_format: json
+      validate_certs: no
+      headers:
+        Cookie: "{{ aci_login.set_cookie }}"
+        Accept: 'application/json'
+      body:
+        fvTenant:
+          attributes:
+            dn: "uni/tn-{{ tenant }}"
+          children:
+            - fvAp:
+                attributes:
+                  dn: "uni/tn-{{ tenant }}/ap-aci-containers-{{ clustername }}"
+                children:
+                  - fvAEPg:
+                      attributes:
+                        dn: "uni/tn-{{ tenant }}/ap-aci-containers-{{ clustername }}/epg-aci-containers-nodes"
+                      children:
+                        - fvRsProv:
+                            attributes:
+                              tnVzBrCPName: "aci-containers-{{ clustername }}_prometheus"
+                  - fvAEPg:
+                      attributes:
+                        dn: "uni/tn-{{ tenant }}/ap-aci-containers-{{ clustername }}/epg-aci-containers-default"
+                      children:
+                        - fvRsProv:
+                            attributes:
+                              tnVzBrCPName: "aci-containers-{{ clustername }}_prometheus"
+                              status: "created,modified"
+                  - fvAEPg:
+                      attributes:
+                        dn: "uni/tn-{{ tenant }}/ap-aci-containers-{{ clustername }}/epg-aci-containers-system"
+                      children:
+                        - fvRsCons:
+                            attributes:
+                              tnVzBrCPName: "aci-containers-{{ clustername }}_prometheus"
+                              status: "created,modified"
+
+      return_content: yes
+      status_code: [200,400]
+    register: aci_rest_call_result
+
+  - name: "Display Error Message when deployment failed"
+    debug:
+      msg: "WARNING:{{ aci_rest_call_result.json.imdata[0].error.attributes.text }}"
+    when: aci_rest_call_result.status != 200
