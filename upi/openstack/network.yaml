@@ -64,7 +64,7 @@
     ansible.builtin.command:
       cmd: "openstack network set --tag {{ primary_cluster_network_tag }} --tag {{ cluster_id_tag }} {{ os_network }}"
 
-  - name: 'Set the primaryClusterNetwork tag'
+  - name: 'Create the primary cluster subnet'
     command:
       cmd: "openstack network set --tag {{ os_network }} {{ os_network }}"
 
