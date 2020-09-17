@@ -25,7 +25,7 @@
     ansible.builtin.command:
       cmd: "openstack network set --tag {{ primary_cluster_network_tag }} --tag {{ cluster_id_tag }} {{ os_network }}"
 
-  - name: 'Create the primary cluster subnet'
+  - name: 'Create a subnet'
     openstack.cloud.subnet:
       name: "{{ os_subnet }}"
       network_name: "{{ os_network }}"
