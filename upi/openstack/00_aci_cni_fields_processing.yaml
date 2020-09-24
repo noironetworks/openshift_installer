@@ -1,0 +1,39 @@
+- hosts: all
+  gather_facts: no
+
+  environment:
+    ACC_PROVISION_TAR: "{{ aci_cni['acc_provision_tar'] }}"
+    ACC_FIELDS_PATH: "{{ aci_cni['aci_cni_fields_path'] }}"
+
+  tasks:
+  - debug:
+      msg: "{{ansible_python_interpreter}}"
+
+  - name: run script
+    shell: python3 scripts/create_config.py
+
+  #- name: run script to create aci cni fields file
+  #script: scripts/create_config.py
+  #args:
+  #  chdir: /home/noiro
+  #  executable: /usr/bin/python3
+  #environment:
+  #  ACC_PROVISION_TAR: "{{ aci_cni['acc_provision_tar'] }}"
+  #  ACC_FIELDS_PATH: "{{ aci_cni['aci_cni_fields_path'] }}"
+
+  - name: set vars from config
+    include_vars:
+      file: "{{ aci_cni['aci_cni_fields_path'] }}"
+      name: aci_cni_extra
+
+  - name: Delete aci cni fields file
+    file:
+      path: "{{ aci_cni['aci_cni_fields_path'] }}"
+      state: absent
+
+  - name: Set aci_cni facts
+    set_fact:
+      aci_cni_fields: "{{ aci_cni_extra['aci_cni'] }}"
+
+  - debug:
+      msg: "{{ aci_cni_fields }}"

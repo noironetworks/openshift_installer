@@ -108,9 +108,6 @@ try:
     cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['vrf'] = aci_vrf_dn
     cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['bd'] = aci_nodebd_dn
 
-    if cur_yaml:
-        with open(processed_inventory,'w') as yamlfile:
-           yaml.safe_dump(cur_yaml, yamlfile)
 except:
     print("Unable to edit inventory.yaml")
 try:

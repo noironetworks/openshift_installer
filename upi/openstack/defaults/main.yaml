@@ -1,0 +1,10 @@
+aci_cni:
+  network_interfaces:
+    node:
+      name: ens3
+      mtu: 1500
+    opflex:
+      mtu: 1500
+      name: ens4
+      subnet: 192.168.208.0/20
+  node_epg: aci-containers-nodes 
