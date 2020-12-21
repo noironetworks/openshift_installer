@@ -187,3 +187,11 @@
     command:
       cmd: "openstack network set {{ os_network }} --mtu {{ aci_cni['network_interfaces']['node']['mtu'] }}"
     when: os_networking_type == "CiscoACI"
+
+  - name: 'Set dns nameserver'
+    command:
+      cmd: "openstack subnet set --dns-nameserver {{ item }} {{ os_subnet }}"
+    when:
+      - os_networking_type == "CiscoACI"
+      - aci_cni.dns_ips is defined and aci_cni.dns_ips | length > 0
+    with_items: "{{ aci_cni.dns_ips }}"
