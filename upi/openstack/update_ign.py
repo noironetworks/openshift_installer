@@ -295,52 +295,52 @@ def update(hostname,ignition):
     config_data = {}
 
     ifcfg_ens3 = ("""TYPE=Ethernet
-    DEVICE=""" + node_interface + """
-    ONBOOT=yes
-    BOOTPROTO=dhcp
-    DEFROUTE=yes
-    PROXY_METHOD=none
-    BROWSER_ONLY=no
-    MTU=""" + neutron_network_mtu + """
-    IPV4_FAILURE_FATAL=no
-    IPV6INIT=no""").encode()
+DEVICE=""" + node_interface + """
+ONBOOT=yes
+BOOTPROTO=dhcp
+DEFROUTE=yes
+PROXY_METHOD=none
+BROWSER_ONLY=no
+MTU=""" + neutron_network_mtu + """
+IPV4_FAILURE_FATAL=no
+IPV6INIT=no""").encode()
 
     ifcfg_ens3_b64 = base64.standard_b64encode(ifcfg_ens3).decode().strip()
 
     config_data['ifcfg_ens3'] = {'base64': ifcfg_ens3_b64, 'path': '/etc/sysconfig/network-scripts/ifcfg-ens3'}
 
     ifcfg_ens4 = ("""TYPE=Ethernet
-    DEVICE=""" + opflex_interface + """
-    ONBOOT=yes
-    BOOTPROTO=dhcp
-    DEFROUTE=no
-    PROXY_METHOD=none
-    BROWSER_ONLY=no
-    MTU=""" + neutron_network_mtu + """
-    IPV4_FAILURE_FATAL=no
-    IPV6INIT=no""").encode()
+DEVICE=""" + opflex_interface + """
+ONBOOT=yes
+BOOTPROTO=dhcp
+DEFROUTE=no
+PROXY_METHOD=none
+BROWSER_ONLY=no
+MTU=""" + neutron_network_mtu + """
+IPV4_FAILURE_FATAL=no
+IPV6INIT=no""").encode()
 
     ifcfg_ens4_b64 = base64.standard_b64encode(ifcfg_ens4).decode().strip()
 
     config_data['ifcfg_ens4'] = {'base64': ifcfg_ens4_b64, 'path': '/etc/sysconfig/network-scripts/ifcfg-ens4'}
 
     opflex_conn = ("""VLAN=yes
-    TYPE=Vlan
-    PHYSDEV=""" + opflex_interface + """
-    VLAN_ID=""" + infra_vlan + """
-    REORDER_HDR=yes
-    GVRP=no
-    MVRP=no
-    PROXY_METHOD=none
-    BROWSER_ONLY=no
-    BOOTPROTO=dhcp
-    DEFROUTE=no
-    IPV4_FAILURE_FATAL=no
-    IPV6INIT=no
-    NAME=opflex-conn
-    DEVICE=""" + opflex_interface + """.""" + infra_vlan + """
-    ONBOOT=yes
-    MTU=""" + neutron_network_mtu).encode()
+TYPE=Vlan
+PHYSDEV=""" + opflex_interface + """
+VLAN_ID=""" + infra_vlan + """
+REORDER_HDR=yes
+GVRP=no
+MVRP=no
+PROXY_METHOD=none
+BROWSER_ONLY=no
+BOOTPROTO=dhcp
+DEFROUTE=no
+IPV4_FAILURE_FATAL=no
+IPV6INIT=no
+NAME=opflex-conn
+DEVICE=""" + opflex_interface + """.""" + infra_vlan + """
+ONBOOT=yes
+MTU=""" + neutron_network_mtu).encode()
 
     ifcfg_opflex_conn_b64 = base64.standard_b64encode(opflex_conn).decode().strip()
 
@@ -353,7 +353,8 @@ def update(hostname,ignition):
     route_opflex_conn_b64 = base64.standard_b64encode(route_opflex_conn).decode().strip()
 
     config_data['route_opflex_conn'] = {'base64': route_opflex_conn_b64, 'path': '/etc/sysconfig/network-scripts/route-opflex-conn'}
-
+    if 'storage' not in ignition.keys():
+        ignition['storage'] = {}
     files = ignition['storage'].get('files', [])
     if 'bootstrap' in hostname.decode():
         ca_cert_path = os.environ.get('OS_CACERT', '')
@@ -383,10 +384,6 @@ def update(hostname,ignition):
         rendered_master = template_master.render(config_data)
         master_b64 = base64.standard_b64encode(rendered_master.encode()).decode().strip()
 
-        with open('./files/99_worker-disable-mco-validation-check.yaml', 'r') as f:
-            mc_config = f.read().encode()
-            mc_config_b64 = base64.standard_b64encode(mc_config).decode().strip()
-
         files.append(
             {
                'path': '/opt/openshift/openshift/99_master-networkscripts.yaml',
@@ -409,18 +406,19 @@ def update(hostname,ignition):
                'filesystem': 'root',
             })
 
-        files.append(
-            {
-                'path': '/opt/openshift/openshift/99_worker-disable-mco-validation-check.yaml',
-                'mode': 420,
-                'contents': {
-                    'source': 'data:text/plain;charset=utf-8;base64,' + mc_config_b64,
-                    'verification': {}
-                },
-                'filesystem': 'root',
-            })
+    else:
+         hostname_b64 = base64.standard_b64encode(hostname).decode().strip()
+         files.append(
+             {
+                 'path': '/etc/hostname',
+                 'mode': 420,
+                 'contents': {
+                     'source': 'data:text/plain;charset=utf-8;base64,' + hostname_b64,
+                     'verification': {}
+                 },
+                 'filesystem': 'root',
+             })
 
-<<<<<<< HEAD
         for element in files:
             if element["path"] == "/opt/openshift/openshift/99_openshift-cluster-api_worker-machineset-0.yaml":
                 ys_data = yaml.safe_load(base64.standard_b64decode(element["contents"]["source"].replace
@@ -544,49 +542,38 @@ def update(hostname,ignition):
             'filesystem': 'root',
         })
 
-    files.append(
-        {
-            'path': config_data['ifcfg_ens3']['path'],
-            'mode': 420,
-            'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_ens3']['base64'],
-                'verification': {}
-            },
-            'filesystem': 'root',
-        })
+         files.append(
+             {
+                 'path': config_data['ifcfg_ens4']['path'],
+                 'mode': 420,
+                 'contents': {
+                     'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_ens4']['base64'],
+                     'verification': {}
+                 },
+                 'filesystem': 'root',
+             })
 
-    files.append(
-        {
-            'path': config_data['ifcfg_ens4']['path'],
-            'mode': 420,
-            'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_ens4']['base64'],
-                'verification': {}
-            },
-            'filesystem': 'root',
-        })
+         files.append(
+             {
+                 'path': config_data['ifcfg_opflex_conn']['path'],
+                 'mode': 420,
+                 'contents': {
+                     'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_opflex_conn']['base64'],
+                     'verification': {}
+                 },
+                 'filesystem': 'root',
+             })
 
-    files.append(
-        {
-            'path': config_data['ifcfg_opflex_conn']['path'],
-            'mode': 420,
-            'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_opflex_conn']['base64'],
-                'verification': {}
-            },
-            'filesystem': 'root',
-        })
-
-    files.append(
-        {
-            'path': config_data['route_opflex_conn']['path'],
-            'mode': 420,
-            'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + config_data['route_opflex_conn']['base64'],
-                'verification': {}
-            },
-            'filesystem': 'root',
-        })
+         files.append(
+             {
+                 'path': config_data['route_opflex_conn']['path'],
+                 'mode': 420,
+                 'contents': {
+                     'source': 'data:text/plain;charset=utf-8;base64,' + config_data['route_opflex_conn']['base64'],
+                     'verification': {}
+                 },
+                 'filesystem': 'root',
+             })
 
     ignition['storage']['files'] = files
     return ignition
@@ -617,19 +604,12 @@ os.system('''cat > $INFRA_ID-bootstrap-ignition.json << EOL
     "config": {
       "append": [
         {
-          "source": "$(swift stat -v | grep StorageURL | awk -F': ' '{print$2}')/bootstrap/bootstrap.ign",
-          "verification": {}
+          "source": "$(swift stat -v | grep StorageURL | awk -F': ' '{print$2}')/bootstrap/bootstrap.ign"
         }
       ]
     },
-    "security": {},
-    "timeouts": {},
-    "version": "2.2.0"
-  },
-  "networkd": {},
-  "passwd": {},
-  "storage": {},
-  "systemd": {}
+    "version": "3.1.0"
+  }
 }
 EOL''')
 

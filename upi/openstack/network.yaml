@@ -335,3 +335,4 @@
     command:
       cmd: "openstack networrk set {{ os_network }} --mtu {{ aci_cni['network_interfaces']['opflex']['mtu'] }}"
     when: os_networking_type == "CiscoACI"
+    with_items: "{{ aci_cni.dns_ips }}"
