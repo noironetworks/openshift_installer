@@ -1,0 +1,32 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: worker
+  name: 02-worker-nm-restart
+spec:
+  config:
+    ignition:
+      config: {}
+      security:
+        tls: {}
+      timeouts: {}
+      version: 2.2.0
+    networkd: {}
+    passwd: {}
+    storage: {}
+    systemd:
+      units:
+      - contents: |
+          [Unit]
+          Wants=network-online.target
+          After=network-online.target
+          Description=Restarting Network Manager
+          [Service]
+          Type=simple
+          ExecStart=sh -c "sudo systemctl restart NetworkManager"
+          ExecStartPost=sh -c "sudo systemctl restart kubelet"
+          [Install]
+          WantedBy=multi-user.target
+        enabled: true
+        name: machine-nm-restart.service
