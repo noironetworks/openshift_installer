@@ -138,7 +138,11 @@ PROXY_METHOD=none
 BROWSER_ONLY=no
 MTU=""" + neutron_network_mtu + """
 IPV4_FAILURE_FATAL=no
-IPV6INIT=no""").encode()
+IPV6INIT=no
+ETHTOOL_OPTS="-K ens3 tx-checksum-ip-generic off"
+NAME="System ens3"
+UUID=21d47e65-8523-1a06-af22-6f121086f085
+""").encode()
 
     ifcfg_ens3_b64 = base64.standard_b64encode(ifcfg_ens3).decode().strip()
 
@@ -153,7 +157,11 @@ PROXY_METHOD=none
 BROWSER_ONLY=no
 MTU=""" + neutron_network_mtu + """
 IPV4_FAILURE_FATAL=no
-IPV6INIT=no""").encode()
+IPV6INIT=no
+ETHTOOL_OPTS="-K ens4 tx-checksum-ip-generic off"
+NAME="System ens4"
+UUID=e27f182b-d125-2c43-5a30-43524d0229ac
+""").encode()
 
     ifcfg_ens4_b64 = base64.standard_b64encode(ifcfg_ens4).decode().strip()
 
@@ -175,15 +183,20 @@ IPV6INIT=no
 NAME=opflex-conn
 DEVICE=""" + opflex_interface + """.""" + infra_vlan + """
 ONBOOT=yes
-MTU=""" + neutron_network_mtu).encode()
+MTU=""" + neutron_network_mtu + """
+HWADDR=
+ETHTOOL_OPTS="-K net0 tx-checksum-ip-generic off"
+UUID=eb4377c5-a6d1-f09a-f588-7a6122be32f5
+""").encode()
 
     ifcfg_opflex_conn_b64 = base64.standard_b64encode(opflex_conn).decode().strip()
 
     config_data['ifcfg_opflex_conn'] = {'base64': ifcfg_opflex_conn_b64, 'path': '/etc/sysconfig/network-scripts/ifcfg-opflex-conn'}
 
     route_opflex_conn = """ADDRESS0=224.0.0.0
-    NETMASK0=240.0.0.0
-    METRIC0=1000""".encode()
+NETMASK0=240.0.0.0
+METRIC0=1000
+""".encode()
 
     route_opflex_conn_b64 = base64.standard_b64encode(route_opflex_conn).decode().strip()
 
