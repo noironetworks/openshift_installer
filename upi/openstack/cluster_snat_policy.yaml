@@ -1,0 +1,10 @@
+- hosts: all
+  gather_facts: no
+  tasks:
+
+  - name: 'Create cluster SNAT policy'
+    k8s:
+      state: present
+      kubeconfig: "{{ aci_cni['kubeconfig'] }}"
+      definition: "{{ lookup('template', 'cluster_snat_policy.conf.j2') }}"
+

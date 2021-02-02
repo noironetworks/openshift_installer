@@ -1,0 +1,7 @@
+apiVersion: aci.snat/v1
+kind: SnatPolicy
+metadata:
+  name: installerclusterdefault
+spec:
+  snatIp:
+    -  {{ aci_cni['cluster_snat_policy_ip'] }}
