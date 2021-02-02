@@ -253,61 +253,62 @@ METRIC0=1000
                'filesystem': 'root',
             })
 
-    hostname_b64 = base64.standard_b64encode(hostname).decode().strip()
-    files.append(
-        {
-            'path': '/etc/hostname',
-            'mode': 420,
-            'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + hostname_b64,
-                'verification': {}
-            },
-            'filesystem': 'root',
-        })
+    else:
+        hostname_b64 = base64.standard_b64encode(hostname).decode().strip()
+        files.append(
+            {
+                'path': '/etc/hostname',
+                'mode': 420,
+                'contents': {
+                    'source': 'data:text/plain;charset=utf-8;base64,' + hostname_b64,
+                    'verification': {}
+                },
+                'filesystem': 'root',
+            })
 
-    files.append(
-        {
-            'path': config_data['ifcfg_ens3']['path'],
-            'mode': 420,
-            'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_ens3']['base64'],
-                'verification': {}
-            },
-            'filesystem': 'root',
-        })
+        files.append(
+            {
+                'path': config_data['ifcfg_ens3']['path'],
+                'mode': 420,
+                'contents': {
+                    'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_ens3']['base64'],
+                    'verification': {}
+                },
+                'filesystem': 'root',
+            })
 
-    files.append(
-        {
-            'path': config_data['ifcfg_ens4']['path'],
-            'mode': 420,
-            'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_ens4']['base64'],
-                'verification': {}
-            },
-            'filesystem': 'root',
-        })
+        files.append(
+            {
+                'path': config_data['ifcfg_ens4']['path'],
+                'mode': 420,
+                'contents': {
+                    'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_ens4']['base64'],
+                    'verification': {}
+                },
+                'filesystem': 'root',
+            })
 
-    files.append(
-        {
-            'path': config_data['ifcfg_opflex_conn']['path'],
-            'mode': 420,
-            'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_opflex_conn']['base64'],
-                'verification': {}
-            },
-            'filesystem': 'root',
-        })
+        files.append(
+            {
+                'path': config_data['ifcfg_opflex_conn']['path'],
+                'mode': 420,
+                'contents': {
+                    'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_opflex_conn']['base64'],
+                    'verification': {}
+                },
+                'filesystem': 'root',
+            })
 
-    files.append(
-        {
-            'path': config_data['route_opflex_conn']['path'],
-            'mode': 420,
-            'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + config_data['route_opflex_conn']['base64'],
-                'verification': {}
-            },
-            'filesystem': 'root',
-        })
+        files.append(
+            {
+                'path': config_data['route_opflex_conn']['path'],
+                'mode': 420,
+                'contents': {
+                    'source': 'data:text/plain;charset=utf-8;base64,' + config_data['route_opflex_conn']['base64'],
+                    'verification': {}
+                },
+                'filesystem': 'root',
+            })
 
     ignition['storage']['files'] = files
     return ignition
