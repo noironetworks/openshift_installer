@@ -130,60 +130,73 @@ def update(hostname,ignition):
     config_data = {}
 
     ifcfg_ens3 = ("""TYPE=Ethernet
-    DEVICE=""" + node_interface + """
-    ONBOOT=yes
-    BOOTPROTO=dhcp
-    DEFROUTE=yes
-    PROXY_METHOD=none
-    BROWSER_ONLY=no
-    MTU=""" + neutron_network_mtu + """
-    IPV4_FAILURE_FATAL=no
-    IPV6INIT=no""").encode()
+DEVICE=""" + node_interface + """
+ONBOOT=yes
+BOOTPROTO=dhcp
+DEFROUTE=yes
+PROXY_METHOD=none
+BROWSER_ONLY=no
+MTU=""" + neutron_network_mtu + """
+IPV4_FAILURE_FATAL=no
+IPV6INIT=no
+ETHTOOL_OPTS="-K ens3 tx-checksum-ip-generic off"
+NAME="System ens3"
+UUID=21d47e65-8523-1a06-af22-6f121086f085
+""").encode()
 
     ifcfg_ens3_b64 = base64.standard_b64encode(ifcfg_ens3).decode().strip()
 
     config_data['ifcfg_ens3'] = {'base64': ifcfg_ens3_b64, 'path': '/etc/sysconfig/network-scripts/ifcfg-ens3'}
 
     ifcfg_ens4 = ("""TYPE=Ethernet
-    DEVICE=""" + opflex_interface + """
-    ONBOOT=yes
-    BOOTPROTO=dhcp
-    DEFROUTE=no
-    PROXY_METHOD=none
-    BROWSER_ONLY=no
-    MTU=""" + neutron_network_mtu + """
-    IPV4_FAILURE_FATAL=no
-    IPV6INIT=no""").encode()
+DEVICE=""" + opflex_interface + """
+ONBOOT=yes
+BOOTPROTO=dhcp
+DEFROUTE=no
+PROXY_METHOD=none
+BROWSER_ONLY=no
+MTU=""" + neutron_network_mtu + """
+IPV4_FAILURE_FATAL=no
+IPV6INIT=no
+ETHTOOL_OPTS="-K ens4 tx-checksum-ip-generic off"
+NAME="System ens4"
+UUID=e27f182b-d125-2c43-5a30-43524d0229ac
+""").encode()
 
     ifcfg_ens4_b64 = base64.standard_b64encode(ifcfg_ens4).decode().strip()
 
     config_data['ifcfg_ens4'] = {'base64': ifcfg_ens4_b64, 'path': '/etc/sysconfig/network-scripts/ifcfg-ens4'}
 
     opflex_conn = ("""VLAN=yes
-    TYPE=Vlan
-    PHYSDEV=""" + opflex_interface + """
-    VLAN_ID=""" + infra_vlan + """
-    REORDER_HDR=yes
-    GVRP=no
-    MVRP=no
-    PROXY_METHOD=none
-    BROWSER_ONLY=no
-    BOOTPROTO=dhcp
-    DEFROUTE=no
-    IPV4_FAILURE_FATAL=no
-    IPV6INIT=no
-    NAME=opflex-conn
-    DEVICE=""" + opflex_interface + """.""" + infra_vlan + """
-    ONBOOT=yes
-    MTU=""" + neutron_network_mtu).encode()
+TYPE=Vlan
+PHYSDEV=""" + opflex_interface + """
+VLAN_ID=""" + infra_vlan + """
+REORDER_HDR=yes
+GVRP=no
+MVRP=no
+PROXY_METHOD=none
+BROWSER_ONLY=no
+BOOTPROTO=dhcp
+DEFROUTE=no
+IPV4_FAILURE_FATAL=no
+IPV6INIT=no
+NAME=opflex-conn
+DEVICE=""" + opflex_interface + """.""" + infra_vlan + """
+ONBOOT=yes
+MTU=""" + neutron_network_mtu + """
+HWADDR=
+ETHTOOL_OPTS="-K net0 tx-checksum-ip-generic off"
+UUID=eb4377c5-a6d1-f09a-f588-7a6122be32f5
+""").encode()
 
     ifcfg_opflex_conn_b64 = base64.standard_b64encode(opflex_conn).decode().strip()
 
     config_data['ifcfg_opflex_conn'] = {'base64': ifcfg_opflex_conn_b64, 'path': '/etc/sysconfig/network-scripts/ifcfg-opflex-conn'}
 
     route_opflex_conn = """ADDRESS0=224.0.0.0
-    NETMASK0=240.0.0.0
-    METRIC0=1000""".encode()
+NETMASK0=240.0.0.0
+METRIC0=1000
+""".encode()
 
     route_opflex_conn_b64 = base64.standard_b64encode(route_opflex_conn).decode().strip()
 
@@ -218,10 +231,6 @@ def update(hostname,ignition):
         rendered_master = template_master.render(config_data)
         master_b64 = base64.standard_b64encode(rendered_master.encode()).decode().strip()
 
-        with open('./files/99_worker-disable-mco-validation-check.yaml', 'r') as f:
-            mc_config = f.read().encode()
-            mc_config_b64 = base64.standard_b64encode(mc_config).decode().strip()
-
         files.append(
             {
                'path': '/opt/openshift/openshift/99_master-networkscripts.yaml',
@@ -244,72 +253,62 @@ def update(hostname,ignition):
                'filesystem': 'root',
             })
 
+    else:
+        hostname_b64 = base64.standard_b64encode(hostname).decode().strip()
         files.append(
             {
-                'path': '/opt/openshift/openshift/99_worker-disable-mco-validation-check.yaml',
+                'path': '/etc/hostname',
                 'mode': 420,
                 'contents': {
-                    'source': 'data:text/plain;charset=utf-8;base64,' + mc_config_b64,
+                    'source': 'data:text/plain;charset=utf-8;base64,' + hostname_b64,
                     'verification': {}
                 },
                 'filesystem': 'root',
             })
 
-    hostname_b64 = base64.standard_b64encode(hostname).decode().strip()
-    files.append(
-        {
-            'path': '/etc/hostname',
-            'mode': 420,
-            'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + hostname_b64,
-                'verification': {}
-            },
-            'filesystem': 'root',
-        })
+        files.append(
+            {
+                'path': config_data['ifcfg_ens3']['path'],
+                'mode': 420,
+                'contents': {
+                    'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_ens3']['base64'],
+                    'verification': {}
+                },
+                'filesystem': 'root',
+            })
 
-    files.append(
-        {
-            'path': config_data['ifcfg_ens3']['path'],
-            'mode': 420,
-            'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_ens3']['base64'],
-                'verification': {}
-            },
-            'filesystem': 'root',
-        })
+        files.append(
+            {
+                'path': config_data['ifcfg_ens4']['path'],
+                'mode': 420,
+                'contents': {
+                    'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_ens4']['base64'],
+                    'verification': {}
+                },
+                'filesystem': 'root',
+            })
 
-    files.append(
-        {
-            'path': config_data['ifcfg_ens4']['path'],
-            'mode': 420,
-            'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_ens4']['base64'],
-                'verification': {}
-            },
-            'filesystem': 'root',
-        })
+        files.append(
+            {
+                'path': config_data['ifcfg_opflex_conn']['path'],
+                'mode': 420,
+                'contents': {
+                    'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_opflex_conn']['base64'],
+                    'verification': {}
+                },
+                'filesystem': 'root',
+            })
 
-    files.append(
-        {
-            'path': config_data['ifcfg_opflex_conn']['path'],
-            'mode': 420,
-            'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_opflex_conn']['base64'],
-                'verification': {}
-            },
-            'filesystem': 'root',
-        })
-
-    files.append(
-        {
-            'path': config_data['route_opflex_conn']['path'],
-            'mode': 420,
-            'contents': {
-                'source': 'data:text/plain;charset=utf-8;base64,' + config_data['route_opflex_conn']['base64'],
-                'verification': {}
-            },
-            'filesystem': 'root',
-        })
+        files.append(
+            {
+                'path': config_data['route_opflex_conn']['path'],
+                'mode': 420,
+                'contents': {
+                    'source': 'data:text/plain;charset=utf-8;base64,' + config_data['route_opflex_conn']['base64'],
+                    'verification': {}
+                },
+                'filesystem': 'root',
+            })
 
     ignition['storage']['files'] = files
     return ignition
