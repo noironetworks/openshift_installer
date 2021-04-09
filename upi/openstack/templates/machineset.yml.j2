@@ -5,21 +5,22 @@ metadata:
     machine.openshift.io/cluster-api-cluster: {{ os_infra_id }}
     machine.openshift.io/cluster-api-machine-role: worker
     machine.openshift.io/cluster-api-machine-type: worker
-  name: {{ mcset.stdout }}
+  name: {{ os_infra_id }}-worker-0
   namespace: openshift-machine-api
 spec:
   replicas: {{ os_compute_nodes_number }}
   selector:
     matchLabels:
       machine.openshift.io/cluster-api-cluster: {{ os_infra_id }}
-      machine.openshift.io/cluster-api-machineset: {{ mcset.stdout }}
   template:
+      machine.openshift.io/cluster-api-machineset: {{ os_infra_id }}-worker-0
+  template:    
     metadata:
       labels:
         machine.openshift.io/cluster-api-cluster: {{ os_infra_id }}
         machine.openshift.io/cluster-api-machine-role: worker
         machine.openshift.io/cluster-api-machine-type: worker
-        machine.openshift.io/cluster-api-machineset: {{ mcset.stdout }}
+        machine.openshift.io/cluster-api-machineset: {{ os_infra_id }}-worker-0
     spec:
       metadata: {}
       providerSpec:
@@ -48,7 +49,7 @@ spec:
             openshiftClusterID: {{ os_infra_id }}
           securityGroups:
             - filter: {}
-              name: {{ os_infra_id }}-worker
+              name: {{ os_infra_id  }}-worker
           kind: OpenstackProviderSpec
           tags:
             - openshiftClusterID={{ os_infra_id }}
