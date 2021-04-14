@@ -55,6 +55,3 @@
       kubeconfig: "{{ aci_cni['kubeconfig'] }}"
       state: present
       definition: "{{ lookup('template', 'machineset.yml.j2')}}"
-
-- import_playbook: update_machineset.yaml
-  tags: update_mc
