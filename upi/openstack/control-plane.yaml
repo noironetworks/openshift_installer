@@ -129,10 +129,8 @@
       # In this case, the first node will look for this filename:
       #    "{{ infraID }}-master-0-ignition.json"
       userdata: "{{ lookup('file', [item.1, item.0, 'ignition.json'] | join('-')) | string }}"
-<<<<<<< HEAD
       nics:
       - port-name: "{{ os_port_master }}-{{ item.0 }}"
-=======
       scheduler_hints:
         group: "{{ server_group_id }}"
       meta: "{{ cluster_id_tag }}"
@@ -170,3 +168,6 @@
 - import_playbook: update_machineset.yaml
   tags: update_mc
     when: os_networking_type == "CiscoACI"
+- import_playbook: update_machineset.yaml
+  tags: update_mc
+>>>>>>> 67b9f9596c (Fix for update_machineset - Correcting changes)
