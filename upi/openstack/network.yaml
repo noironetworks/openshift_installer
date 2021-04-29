@@ -61,7 +61,7 @@
 
   - name: 'list subnet pool'
     command:
-      cmd: "openstack subnet pool list --name {{ node_network_subnet_pool }}"
+      cmd: "openstack subnet pool list --name {{ node_network_subnet_pool }} -f value -c Prefixes"
     when: os_networking_type == "CiscoACI"
     register: primary_subnet_pool
 
@@ -71,10 +71,11 @@
     when:
       - os_networking_type == "CiscoACI"
       - primary_subnet_pool.stdout == ""
+      - os_subnet_range not in primary_subnet_pool.stdout_lines|list
 
   - name: 'list primary subnet'
     command:
-      cmd: "openstack subnet list --name {{ os_subnet }} --tag {{ cluster_id_tag }}"
+      cmd: "openstack subnet list --name {{ os_subnet }} --network {{ os_network }} --tag {{ cluster_id_tag }}"
     when: os_networking_type == "CiscoACI"
     register: primary_cluster_subnet
 
