@@ -22,12 +22,39 @@
     when: os_networking_type == "CiscoACI"
     register: cluster_network
 
+  - name: 'get network epg contract masters attributes'
+    command:
+      cmd: "neutron net-show {{ os_network }} -f json -c apic:epg_contract_masters"
+    when:
+      - os_networking_type == "CiscoACI"
+      - cluster_network.stdout != ""
+    register: epg_bd
+
+  - name: 'convert network show output into dictionary type'
+    set_fact:
+         epg_bd_out: "{{ epg_bd.stdout| from_json }}"
+    when:
+      - os_networking_type == "CiscoACI"
+      - cluster_network.stdout != ""
+      - epg_bd.stdout != ""
+
+  - name: 'set facts for network epg contract masters attributes'
+    set_fact:
+         app_profile_name: "{{ epg_bd_out['apic:epg_contract_masters'].0.app_profile_name }}"
+         node_epg: "{{ epg_bd_out['apic:epg_contract_masters'].0.name }}"
+    when:
+      - os_networking_type == "CiscoACI"
+      - cluster_network.stdout != ""
+      - epg_bd_out is defined
+
   - name: 'Create the cluster network with aci-containers-nodes EPG contract relationship for node network'
     command:
       cmd: "neutron net-create {{ os_network }} --apic:epg_contract_masters list=true type=dict app_profile_name={{ aci_cni['app_profile'] }},name={{ aci_cni['node_epg'] }} --apic:distinguished_names type=dict BridgeDomain={{ aci_cni['network_interfaces']['node']['bd'] }}"
     when:
       - os_networking_type == "CiscoACI"
-      - cluster_network.stdout == ""
+      - (cluster_network.stdout == "" ) or
+        (app_profile_name is defined and app_profile_name != aci_cni['app_profile']) or
+        (node_epg is defined and node_epg != aci_cni['node_epg'])
 
   - name: 'Set tags on the  primary cluster network'
     command:
