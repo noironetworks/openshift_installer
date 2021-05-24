@@ -16,10 +16,45 @@
       name: "{{ os_network }}"
     when: os_networking_type != "CiscoACI"
 
+  - name: 'list network'
+    command:
+      cmd: "openstack network list --name {{ os_network }} --tag {{ cluster_id_tag }}"
+    when: os_networking_type == "CiscoACI"
+    register: cluster_network
+
+  - name: 'get network epg contract masters attributes'
+    command:
+      cmd: "neutron net-show {{ os_network }} -f json -c apic:epg_contract_masters"
+    when:
+      - os_networking_type == "CiscoACI"
+      - cluster_network.stdout != ""
+    register: epg_bd
+
+  - name: 'convert network show output into dictionary type'
+    set_fact:
+         epg_bd_out: "{{ epg_bd.stdout| from_json }}"
+    when:
+      - os_networking_type == "CiscoACI"
+      - cluster_network.stdout != ""
+      - epg_bd.stdout != ""
+
+  - name: 'set facts for network epg contract masters attributes'
+    set_fact:
+         app_profile_name: "{{ epg_bd_out['apic:epg_contract_masters'].0.app_profile_name }}"
+         node_epg: "{{ epg_bd_out['apic:epg_contract_masters'].0.name }}"
+    when:
+      - os_networking_type == "CiscoACI"
+      - cluster_network.stdout != ""
+      - epg_bd_out is defined
+
   - name: 'Create the cluster network with aci-containers-nodes EPG contract relationship for node network'
     command:
       cmd: "neutron net-create {{ os_network }} --apic:epg_contract_masters list=true type=dict app_profile_name={{ aci_cni['app_profile'] }},name={{ aci_cni['node_epg'] }} --apic:distinguished_names type=dict BridgeDomain={{ aci_cni['network_interfaces']['node']['bd'] }}"
-    when: os_networking_type == "CiscoACI"
+    when:
+      - os_networking_type == "CiscoACI"
+      - (cluster_network.stdout == "" ) or
+        (app_profile_name is defined and app_profile_name != aci_cni['app_profile']) or
+        (node_epg is defined and node_epg != aci_cni['node_epg'])
 
   - name: 'Set tags on the  primary cluster network'
     ansible.builtin.command:
@@ -35,20 +70,52 @@
       dns_nameservers: "{{ os_external_dns }}"
     when: os_networking_type != "CiscoACI"
 
+  - name: 'List the cluster address-scope'
+    command:
+      cmd: "openstack address scope list --name node_network_address_scope"
+    when: os_networking_type == "CiscoACI"
+    register: cluster_address_scope
+
   - name: 'Create the cluster address-scope'
     command:
       cmd: "neutron address-scope-create node_network_address_scope 4 --apic:distinguished_names type=dict VRF={{ aci_cni['network_interfaces']['node']['vrf'] }}"
+    when:
+      - os_networking_type == "CiscoACI"
+      - cluster_address_scope.stdout == ""
+
+  - name: 'list subnet pool'
+    command:
+      cmd: "openstack subnet pool list --name node_network_subnet_pool -f value -c Prefixes"
     when: os_networking_type == "CiscoACI"
+    register: primary_subnet_pool
 
   - name: 'Create the subnetpool'
     command:
       cmd: "neutron subnetpool-create --pool-prefix {{ os_subnet_range }} --address-scope node_network_address_scope node_network_subnet_pool"
+    when:
+      - os_networking_type == "CiscoACI"
+      - primary_subnet_pool.stdout == "" or os_subnet_range not in primary_subnet_pool.stdout
+
+  - name: 'list primary subnet'
+    command:
+      cmd: "openstack subnet list --name {{ os_subnet }} --network {{ os_network }} --tag {{ cluster_id_tag }}"
     when: os_networking_type == "CiscoACI"
+    register: primary_cluster_subnet
+
+  - name: 'get cidr of primary subnet'
+    command:
+      cmd: "openstack subnet list --name {{ os_subnet }} --network {{ os_network }} --tag {{ cluster_id_tag }} -f value -c Subnet"
+    when:
+      - os_networking_type == "CiscoACI"
+      - primary_cluster_subnet.stdout != ""
+    register: primary_subnet_cidr
 
   - name: 'Create a subnet'
     command:
       cmd: "openstack subnet create --network {{ os_network }}  --subnet-pool node_network_subnet_pool --subnet-range {{ os_subnet_range }} --allocation-pool start={{ os_subnet_range | next_nth_usable(10) }},end={{ os_subnet_range | ipaddr('last_usable') }} --dhcp {{ os_subnet }}"
-    when: os_networking_type == "CiscoACI"
+    when:
+      - os_networking_type == "CiscoACI"
+      - primary_cluster_subnet.stdout == "" or os_subnet_range not in primary_subnet_cidr.stdout_lines|list
 
   - name: 'Set tags on  primary cluster subnet'
     ansible.builtin.command:
@@ -123,18 +190,30 @@
     - os_networking_type == "Kuryr"
     - pods_subnet_pool.stdout == ""
 
+  - name: 'list external router'
+    command:
+      cmd: "openstack router list --name {{ os_router }}"
+    register: ext_router_list
+
   - name: 'Create external router'
     openstack.cloud.router:
       name: "{{ os_router }}"
       network: "{{ os_external_network }}"
       interfaces:
       - "{{ os_subnet }}"
-    when: os_external_network is defined and os_external_network|length>0
+    when:
+      - os_external_network is defined and os_external_network|length>0
+      - ext_router_list.stdout == ""
 
   - name: 'Set external router tag'
     ansible.builtin.command:
       cmd: "openstack router set --tag {{ cluster_id_tag }} {{ os_router }}"
     when: os_external_network is defined and os_external_network|length>0
+
+  - name: 'Get API port'
+    command:
+      cmd: "openstack port list --tags {{ os_port_api }}"
+    register: api_port
 
   - name: 'Create the API port'
     openstack.cloud.port:
@@ -149,6 +228,13 @@
   - name: 'Set API port tag'
     ansible.builtin.command:
       cmd: "openstack port set --tag {{ cluster_id_tag }} {{ os_port_api }}"
+    when:
+      - api_port.stdout == ""
+
+  - name: 'Get Ingress port'
+    command:
+      cmd: "openstack port list --tags {{ os_port_ingress }}"
+    register: ingress_port
 
   - name: 'Create the Ingress port'
     openstack.cloud.port:
@@ -162,7 +248,10 @@
 
   - name: 'Set the Ingress port tag'
     ansible.builtin.command:
-      cmd: "openstack port set --tag {{ cluster_id_tag }} {{ os_port_ingress }}"
+    command:
+      cmd: "openstack port set --tag {{ os_port_ingress }} --tag {{ cluster_id_tag }} {{ os_port_ingress }}"
+    when:
+      - ingress_port.stdout == ""
 
   # NOTE: openstack ansible module doesn't allow attaching Floating IPs to
   # ports, let's use the CLI instead
@@ -183,10 +272,16 @@
       cmd: "openstack network set {{ os_network }} --mtu {{ aci_cni['network_interfaces']['node']['mtu'] }}"
     when: os_networking_type == "CiscoACI"
 
+  - name: 'Get dns nameserver'
+    command:
+      cmd: "openstack subnet  show {{ os_subnet }} -c dns_nameservers -f value"
+    register: dns_nameserver_list
+
   - name: 'Set dns nameserver'
     command:
       cmd: "openstack subnet set --dns-nameserver {{ item }} {{ os_subnet }}"
     when:
       - os_networking_type == "CiscoACI"
       - aci_cni.dns_ips is defined and aci_cni.dns_ips | length > 0
+      - item not in dns_nameserver_list.stdout
     with_items: "{{ aci_cni.dns_ips }}"
