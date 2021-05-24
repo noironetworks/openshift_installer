@@ -58,7 +58,11 @@
   - name: 'Create the cluster network with aci-containers-nodes EPG contract relationship for node network'
     command:
       cmd: "neutron net-create {{ os_network }} --apic:epg_contract_masters list=true type=dict app_profile_name={{ aci_cni['app_profile'] }},name={{ aci_cni['node_epg'] }} --apic:distinguished_names type=dict BridgeDomain={{ aci_cni['network_interfaces']['node']['bd'] }}"
-    when: os_networking_type == "CiscoACI"
+    when:
+      - os_networking_type == "CiscoACI"
+      - (cluster_network.stdout == "" ) or
+        (app_profile_name is defined and app_profile_name != aci_cni['app_profile']) or
+        (node_epg is defined and node_epg != aci_cni['node_epg'])
 
   - name: 'Set tags on the  primary cluster network'
     ansible.builtin.command:
@@ -146,17 +150,43 @@
   - name: 'Create the cluster address-scope'
     command:
       cmd: "neutron address-scope-create node_network_address_scope 4 --apic:distinguished_names type=dict VRF={{ aci_cni['network_interfaces']['node']['vrf'] }}"
+    when:
+      - os_networking_type == "CiscoACI"
+      - cluster_address_scope.stdout == ""
+
+  - name: 'list subnet pool'
+    command:
+      cmd: "openstack subnet pool list --name node_network_subnet_pool -f value -c Prefixes"
     when: os_networking_type == "CiscoACI"
+    register: primary_subnet_pool
 
   - name: 'Create the subnetpool'
     command:
       cmd: "neutron subnetpool-create --pool-prefix {{ os_subnet_range }} --address-scope node_network_address_scope node_network_subnet_pool"
+    when:
+      - os_networking_type == "CiscoACI"
+      - primary_subnet_pool.stdout == "" or os_subnet_range not in primary_subnet_pool.stdout
+
+  - name: 'list primary subnet'
+    command:
+      cmd: "openstack subnet list --name {{ os_subnet }} --network {{ os_network }} --tag {{ cluster_id_tag }}"
     when: os_networking_type == "CiscoACI"
+    register: primary_cluster_subnet
+
+  - name: 'get cidr of primary subnet'
+    command:
+      cmd: "openstack subnet list --name {{ os_subnet }} --network {{ os_network }} --tag {{ cluster_id_tag }} -f value -c Subnet"
+    when:
+      - os_networking_type == "CiscoACI"
+      - primary_cluster_subnet.stdout != ""
+    register: primary_subnet_cidr
 
   - name: 'Create a subnet'
     command:
       cmd: "openstack subnet create --network {{ os_network }}  --subnet-pool node_network_subnet_pool --subnet-range {{ os_subnet_range }} --allocation-pool start={{ os_subnet_range | next_nth_usable(10) }},end={{ os_subnet_range | ipaddr('last_usable') }} --dhcp {{ os_subnet }}"
-    when: os_networking_type == "CiscoACI"
+    when:
+      - os_networking_type == "CiscoACI"
+      - primary_cluster_subnet.stdout == "" or os_subnet_range not in primary_subnet_cidr.stdout_lines|list
 
   - name: 'Set tags on  primary cluster subnet'
     ansible.builtin.command:
