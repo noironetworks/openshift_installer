@@ -108,3 +108,5 @@ all:
         node_epg: aci-containers-nodes # Derived
         infra_vlan: 4093 # Derived
         service_vlan: 1033 # Derived
+      os_apiVIP: "{{ os_subnet_range | next_nth_usable(5) }}"
+      os_ingressVIP: "{{ os_subnet_range | next_nth_usable(7) }}"
