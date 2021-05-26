@@ -93,12 +93,21 @@
     when: os_networking_type == "CiscoACI"
     register: primary_subnet_pool
 
+  - name: 'Check if subnetpool already exists with different subnet range.'
+    assert:
+      that:
+        - os_subnet_range in primary_subnet_pool.stdout
+      fail_msg: "node_network_subnet_pool already exists with different subnet range."
+    when:
+      - os_networking_type == "CiscoACI"
+      - primary_subnet_pool.stdout != ""
+
   - name: 'Create the subnetpool'
     command:
       cmd: "neutron subnetpool-create --pool-prefix {{ os_subnet_range }} --address-scope node_network_address_scope node_network_subnet_pool"
     when:
       - os_networking_type == "CiscoACI"
-      - primary_subnet_pool.stdout == "" or os_subnet_range not in primary_subnet_pool.stdout
+      - primary_subnet_pool.stdout == ""
 
   - name: 'list primary subnet'
     command:
@@ -114,12 +123,21 @@
       - primary_cluster_subnet.stdout != ""
     register: primary_subnet_cidr
 
+  - name: 'Check if primary cluster subnet already exists with different subnet range.'
+    assert:
+      that:
+        - os_subnet_range in primary_subnet_cidr.stdout_lines|list
+      fail_msg: "{{ os_subnet }} already exists with different subnet range."
+    when:
+      - os_networking_type == "CiscoACI"
+      - primary_cluster_subnet.stdout != ""
+
   - name: 'Create a subnet'
     command:
       cmd: "openstack subnet create --network {{ os_network }}  --subnet-pool node_network_subnet_pool --subnet-range {{ os_subnet_range }} --allocation-pool start={{ os_subnet_range | next_nth_usable(10) }},end={{ os_subnet_range | ipaddr('last_usable') }} --dhcp {{ os_subnet }}"
     when:
       - os_networking_type == "CiscoACI"
-      - primary_cluster_subnet.stdout == "" or os_subnet_range not in primary_subnet_cidr.stdout_lines|list
+      - primary_cluster_subnet.stdout == ""
 
   - name: 'Set tags on  primary cluster subnet'
     ansible.builtin.command:
