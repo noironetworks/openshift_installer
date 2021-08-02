@@ -8,7 +8,7 @@
   - name: 'Compute resource names'
     set_fact:
       cluster_id_tag: "openshiftClusterID={{ infraID }}"
-      os_network: "{{ infraID }}-network"
+      os_network: "{{ infraID }}-primaryClusterNetwork"
       os_subnet: "{{ infraID }}-nodes"
       os_router: "{{ infraID }}-external-router"
       # Port names
@@ -35,3 +35,7 @@
       os_svc_subnet: "{{ infraID }}-kuryr-service-subnet"
       # Ignition files
       os_bootstrap_ignition: "{{ infraID }}-bootstrap-ignition.json"
+
+  - name: 'Import variables for CiscoACI CNI'
+    include: common_ciscoaci.yaml
+    when: os_networking_type == "CiscoACI"
