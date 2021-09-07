@@ -124,6 +124,7 @@ except:
 infra_vlan = str(aci_infra_vlan)
 infra_id = os.environ.get('INFRA_ID', 'openshift').encode()
 neutron_network_mtu = str(cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['mtu'])
+opflex_network_mtu = str(cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['mtu'])
 
 def update(hostname,ignition):
 
@@ -155,7 +156,7 @@ BOOTPROTO=dhcp
 DEFROUTE=no
 PROXY_METHOD=none
 BROWSER_ONLY=no
-MTU=""" + neutron_network_mtu + """
+MTU=""" + opflex_network_mtu + """
 IPV4_FAILURE_FATAL=no
 IPV6INIT=no
 ETHTOOL_OPTS="-K ens4 tx-checksum-ip-generic off"
@@ -183,7 +184,7 @@ IPV6INIT=no
 NAME=opflex-conn
 DEVICE=""" + opflex_interface + """.""" + infra_vlan + """
 ONBOOT=yes
-MTU=""" + neutron_network_mtu + """
+MTU=""" + opflex_network_mtu + """
 HWADDR=
 ETHTOOL_OPTS="-K net0 tx-checksum-ip-generic off"
 UUID=eb4377c5-a6d1-f09a-f588-7a6122be32f5
