@@ -93,4 +93,3 @@
     when:
       - os_networking_type == "CiscoACI"
       - cisco_cluster_address_scope.stdout != ""
-
