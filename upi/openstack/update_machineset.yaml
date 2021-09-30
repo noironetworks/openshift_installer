@@ -20,7 +20,7 @@
 
   - name: Fetch the name of worker machineset
     shell: >
-     oc get machineset -n openshift-machine-api | grep -m 1 worker | awk '{print $1}'
+     oc get machineset --kubeconfig {{ aci_cni['kubeconfig'] }} -n openshift-machine-api | grep -m 1 worker | awk '{print $1}'
     register: mcset
     retries: 100
     delay: 20
