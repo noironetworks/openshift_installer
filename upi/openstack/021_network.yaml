@@ -123,7 +123,7 @@
 
   - name: 'get cidr of containers subnet'
     command:
-      cmd: "openstack subnet list --name {{ os_aci_containers_subnet }} --network {{ os_aci_containers_network }} --tag {{ cluster_id_tag }} -f value -c Subnet"
+      cmd: "openstack subnet list --name {{ os_aci_containers_subnet }} --network {{ os_aci_containers_network }} -f value -c Subnet"
     when:
       - os_networking_type == "CiscoACI"
       - containers_subnet.stdout != ""
