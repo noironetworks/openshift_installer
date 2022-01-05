@@ -14,7 +14,6 @@ spec:
       machine.openshift.io/cluster-api-cluster: {{ os_infra_id }}
   template:
       machine.openshift.io/cluster-api-machineset: {{ os_infra_id }}-worker-0
-  template:    
     metadata:
       labels:
         machine.openshift.io/cluster-api-cluster: {{ os_infra_id }}

@@ -20,7 +20,7 @@
 
   - name: Fetch the name of worker machineset
     shell: >
-     oc get machineset -n openshift-machine-api | grep -m 1 worker | awk '{print $1}'
+     oc get machineset --kubeconfig {{ aci_cni['kubeconfig'] }} -n openshift-machine-api | grep -m 1 worker | awk '{print $1}'
     register: mcset
     retries: 100
     delay: 20
@@ -82,17 +82,17 @@
     command:
       cmd: "openstack network list --name {{ os_network }} -f value -c Subnets"
     register: nodes_subnet_uuid
-  
+
   - name: 'Extract Secondary Network ID'
     command:
       cmd: "openstack network list --name {{ os_aci_containers_network }} -f value -c ID"
     register: acicontainers_nodes_network_uuid
-  
+
   - name: 'Extract Secondary Subnet ID'
     command:
       cmd: "openstack network list --name {{ os_aci_containers_network }} -f value -c Subnets"
     register: acicontainers_nodes_subnet_uuid
-  
+
   - name: update machineset
     k8s:
       kubeconfig: "{{ aci_cni['kubeconfig'] }}"
