@@ -128,7 +128,7 @@
       - os_networking_type == "CiscoACI"
       - primary_cluster_subnet.stdout != ""
 
-  - name: 'Create a subnet'
+  - name: 'Create the primary cluster subnet'
     command:
       cmd: "openstack subnet create --network {{ os_network }}  --subnet-pool node_network_subnet_pool --subnet-range {{ os_subnet_range }} --allocation-pool start={{ os_subnet_range | next_nth_usable(10) }},end={{ os_subnet_range | ipaddr('last_usable') }} --dhcp {{ os_subnet }}"
     when:
