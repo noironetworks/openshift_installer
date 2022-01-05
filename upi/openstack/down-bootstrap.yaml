@@ -18,9 +18,3 @@
     openstack.cloud.port:
       name: "{{ os_port_bootstrap }}"
       state: absent
-
-  - name: 'Remove the second bootstrap server port'
-    os_port:
-      name: "{{ os_aci_containers_port_bootstrap }}"
-      state: absent
-    when: os_networking_type == "CiscoACI"
