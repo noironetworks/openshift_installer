@@ -13,7 +13,7 @@ spec:
     matchLabels:
       machine.openshift.io/cluster-api-cluster: {{ os_infra_id }}
       machine.openshift.io/cluster-api-machineset: {{ mcset.stdout }}
-  template:    
+  template:
     metadata:
       labels:
         machine.openshift.io/cluster-api-cluster: {{ os_infra_id }}
