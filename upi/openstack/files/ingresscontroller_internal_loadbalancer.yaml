@@ -1,10 +1,10 @@
 apiVersion: operator.openshift.io/v1
 kind: IngressController
-metadata: 
+metadata:
   namespace: openshift-ingress-operator
   name: default
-spec: 
+spec:
   endpointPublishingStrategy:
      type: LoadBalancerService
-     loadBalancer: 
+     loadBalancer:
         scope: Internal
