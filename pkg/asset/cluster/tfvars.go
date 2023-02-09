@@ -354,22 +354,29 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 		if err != nil {
 			return err
 		}
-		apiVIP, err := openstackdefaults.APIVIP(installConfig.Config.Networking)
+		apiVIP, err := openstackdefaults.APIVIP(installConfig.Config.Platform.OpenStack)
 		if err != nil {
 			return err
 		}
-		dnsVIP, err := openstackdefaults.DNSVIP(installConfig.Config.Networking)
+
+		dnsVIP, err := openstackdefaults.DNSVIP(installConfig.Config.Platform.OpenStack)
 		if err != nil {
 			return err
 		}
-		ingressVIP, err := openstackdefaults.IngressVIP(installConfig.Config.Networking)
+		ingressVIP, err := openstackdefaults.IngressVIP(installConfig.Config.Platform.OpenStack)
 		if err != nil {
 			return err
 		}
+                         
+                neutronCIDR := &installConfig.Config.Platform.OpenStack.AciNetExt.NeutronCIDR.IPNet
+                neutronCIDRString := neutronCIDR.String()
+
 		data, err = openstacktfvars.TFVars(
 			masters[0].Spec.ProviderSpec.Value.Object.(*openstackprovider.OpenstackProviderSpec),
 			installConfig.Config.Platform.OpenStack.Cloud,
 			installConfig.Config.Platform.OpenStack.ExternalNetwork,
+                        installConfig.Config.Platform.OpenStack.AciNetExt,
+                        neutronCIDRString,
 			installConfig.Config.Platform.OpenStack.ExternalDNS,
 			installConfig.Config.Platform.OpenStack.LbFloatingIP,
 			apiVIP.String(),

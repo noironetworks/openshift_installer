@@ -2,10 +2,12 @@ package validation
 
 import (
 	"errors"
+        "net"
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
+	"github.com/openshift/installer/pkg/ipnet"
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/openstack"
 	"github.com/openshift/installer/pkg/validate"
@@ -63,6 +65,51 @@ func ValidatePlatform(p *openstack.Platform, n *types.Networking, fldPath *field
 		if err := validate.IP(ip); err != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("ExternalDNS"), p.ExternalDNS, err.Error()))
 		}
+	}
+
+	// Check if snatCRSubnet is a valid subnet or IP
+	if p.AciNetExt.ClusterSNATSubnet != "" {
+		_, _, err := net.ParseCIDR(p.AciNetExt.ClusterSNATSubnet)
+		if err != nil {
+			ip := net.ParseIP(p.AciNetExt.ClusterSNATSubnet)
+			if ip == nil {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("clusterSNATPolicyIP"), p.AciNetExt.ClusterSNATSubnet, err.Error()))
+			}	
+		}
+	}
+
+	// Check if snatCR Destination Subnet is a valid subnet or IP
+        if p.AciNetExt.ClusterSNATDest != "" {
+                _, _, err := net.ParseCIDR(p.AciNetExt.ClusterSNATDest)
+                if err != nil {
+                        ip := net.ParseIP(p.AciNetExt.ClusterSNATDest)
+                        if ip == nil {
+                                allErrs = append(allErrs, field.Invalid(fldPath.Child("clusterSNATPolicyDestIP"), p.AciNetExt.ClusterSNATDest, err.Error()))
+                        }
+                }
+        }
+
+	machineMask := n.MachineNetwork[0].CIDR.Mask
+	if p.AciNetExt.NeutronCIDR.String() != "" {
+                neutronMask := p.AciNetExt.NeutronCIDR.Mask
+                if machineMask.String() != neutronMask.String() {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("neutronCIDR"), p.AciNetExt.NeutronCIDR.String(), "The CIDRs specified in the machineCIDR (" + n.MachineNetwork[0].CIDR.String() + ") and neutronCIDR (" + p.AciNetExt.NeutronCIDR.String() + ") configurations in the install-config.yaml have different subnet masks (machineCIDR mask: " + machineMask.String() + ", neutronCIDR mask: " + neutronMask.String()))
+                }
+        } else {
+		// If no neutron CIDR provided, set it to 192.168.0.0 with the machine CIDR mask
+                neutronIP := net.ParseIP("192.168.0.0")
+                p.AciNetExt.NeutronCIDR = &ipnet.IPNet{
+                                        IPNet: net.IPNet{
+                                                IP:   neutronIP,
+                                                Mask: machineMask,
+                                        },
+                                }
+        }
+
+	_, err = ipnet.ParseCIDR(p.AciNetExt.InstallerHostSubnet)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("installerHostSubnet"),
+                		p.AciNetExt.InstallerHostSubnet, "installerHostSubnet has an invalid subnet value (" + p.AciNetExt.InstallerHostSubnet + ")"))
 	}
 
 	return allErrs

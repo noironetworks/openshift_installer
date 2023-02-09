@@ -1,5 +1,21 @@
 package openstack
 
+import (
+        "github.com/openshift/installer/pkg/ipnet"
+)
+
+type AciNetExtStruct struct {
+        InfraVLAN               string          `json:"infraVlan"`
+        KubeApiVLAN             string          `json:"kubeApiVlan"`
+        ServiceVLAN             string          `json:"serviceVlan"`
+        Mtu                     string          `json:"mtu,omitempty"`
+        ProvisionTar            string		`json:"provisionTar,omitempty"`
+        NeutronCIDR             *ipnet.IPNet    `json:"neutronCIDR,omitempty"`
+        InstallerHostSubnet	string          `json:"installerHostSubnet"`
+	ClusterSNATSubnet       string          `json:"clusterSNATPolicyIP,omitempty"`
+	ClusterSNATDest         string          `json:"clusterSNATPolicyDestIP,omitempty"`
+}
+
 // Platform stores all the global configuration that all
 // machinesets use.
 type Platform struct {
@@ -18,6 +34,9 @@ type Platform struct {
 
 	// ExternalNetwork is name of the external network in your OpenStack cluster.
 	ExternalNetwork string `json:"externalNetwork"`
+
+        // AciNetExt is the name of the map for APIC nested domain fields
+        AciNetExt AciNetExtStruct `json:"aciNetExt"`
 
 	// FlavorName is the name of the compute flavor to use for instances in this cluster.
 	FlavorName string `json:"computeFlavor"`

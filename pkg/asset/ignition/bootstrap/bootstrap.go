@@ -30,6 +30,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/rhcos"
 	"github.com/openshift/installer/pkg/asset/tls"
 	"github.com/openshift/installer/pkg/types"
+        ign "github.com/openshift/installer/pkg/asset/ignition"
 )
 
 const (
@@ -140,6 +141,11 @@ func (a *Bootstrap) Generate(dependencies asset.Parents) error {
 	if err != nil {
 		return err
 	}
+
+	ignitionFiles := ign.IgnitionFiles(installConfig,true)
+	for _, ignFile := range ignitionFiles {
+		a.Config.Storage.Files = append(a.Config.Storage.Files, ignFile)
+	}
 	err = a.addSystemdUnits("bootstrap/systemd/units", templateData)
 	if err != nil {
 		return err
@@ -166,6 +172,13 @@ func (a *Bootstrap) Generate(dependencies asset.Parents) error {
 			return err
 		}
 	}
+
+	logrus.Debug("Adding Bootstrap Systemd")
+
+        systemdUnits := ign.SystemdUnitFiles(installConfig, true)
+        for _, unit := range systemdUnits {
+                a.Config.Systemd.Units = append(a.Config.Systemd.Units, unit)
+        }
 
 	a.addParentFiles(dependencies)
 

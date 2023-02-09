@@ -1,10 +1,18 @@
 package validation
 
 import (
+        "archive/tar"
+	"compress/gzip"
 	"fmt"
+        "gopkg.in/yaml.v2"
+        "io"
+        "io/ioutil"
+	"log"
+	"math"
 	"net"
 	"os"
 	"sort"
+        "strconv"
 	"strings"
 
 	dockerref "github.com/containers/image/docker/reference"
@@ -33,6 +41,28 @@ import (
 const (
 	masterPoolName = "master"
 )
+
+type AciContainersConfig struct {
+        Data ConfigData `yaml:data,omitempty`
+}
+
+type ConfigData struct {
+        HostConfig       string `yaml:"host-agent-config"`
+	ControllerConfig string `yaml:"controller-config"`
+}
+
+type HostConfigMap struct {
+        ServiceVLAN int    `yaml:"service-vlan"`
+        InfraVLAN   int    `yaml:"aci-infra-vlan"`
+        KubeApiVLAN int    `yaml:"kubeapi-vlan"`
+        PodSubnet   string `yaml:"pod-subnet"`
+        NodeSubnet  string `yaml:"node-subnet"`
+}
+
+type ControllerConfigMap struct {
+	PodSubnetChunkSize int `yaml:"pod-subnet-chunk-size"`
+}
+
 
 // ClusterDomain returns the cluster domain for a cluster with the specified
 // base domain and cluster name.
@@ -85,6 +115,68 @@ func ValidateInstallConfig(c *types.InstallConfig, openStackValidValuesFetcher o
 	} else {
 		allErrs = append(allErrs, field.Required(field.NewPath("networking"), "networking is required"))
 	}
+
+	tarField := field.NewPath("ProvisionTar")
+        r, err := os.Open(c.Platform.OpenStack.AciNetExt.ProvisionTar)
+        if err != nil {
+		allErrs = append(allErrs, field.Invalid(tarField, c.Platform.OpenStack.AciNetExt.ProvisionTar, err.Error()))
+    	} else {
+                config, controllerConfig, err := ExtractTarGz(r)
+                if err != nil {
+                        allErrs = append(allErrs, field.Invalid(tarField.Child("Unmarshal"),
+                                c.Platform.OpenStack.AciNetExt.ProvisionTar, err.Error()))
+                } else {
+			c.Platform.OpenStack.AciNetExt.KubeApiVLAN = strconv.Itoa(config.KubeApiVLAN)
+			c.Platform.OpenStack.AciNetExt.InfraVLAN = strconv.Itoa(config.InfraVLAN)
+			c.Platform.OpenStack.AciNetExt.ServiceVLAN = strconv.Itoa(config.ServiceVLAN)
+
+                        // Validate against values from install config
+			machineCIDR := &c.Networking.MachineNetwork[0].CIDR
+			clusterNetworkCIDR := &c.Networking.ClusterNetwork[0].CIDR
+			nodeDiff := DiffSubnets(config.NodeSubnet, machineCIDR)
+                        if nodeDiff != nil {
+				option := UserPrompt(nodeDiff.String(), machineCIDR.String(), "node_subnet", "machineNetworkCIDR")
+				if (option == true) {
+					cidrValue, _ := ipnet.ParseCIDR(nodeDiff.String())
+					c.Networking.MachineNetwork[0].CIDR = *cidrValue
+					log.Print("Setting machineCIDR to " + nodeDiff.String())
+				} else {
+                                	allErrs = append(allErrs, field.Invalid(field.NewPath("machineNetworkCIDR"),
+                                        	c.Networking.DeprecatedMachineCIDR.String(), "node_subnet in acc-provision input(" + nodeDiff.String() + ") has to be the same as machineNetwork CIDR in install-config.yaml(" + machineCIDR.String() + ")"))
+				}
+                        }
+			clusterDiff := DiffSubnets(config.PodSubnet, clusterNetworkCIDR)
+                        if clusterDiff != nil {
+				option := UserPrompt(clusterDiff.String(), clusterNetworkCIDR.String(), "pod_subnet", "clusterNetworkCIDR")
+				if (option == true) {
+					parsedCIDR, _ := ipnet.ParseCIDR(clusterDiff.String())
+					c.Networking.ClusterNetwork[0].CIDR = *parsedCIDR
+					log.Print("Setting clusterNetwork CIDR to " + clusterDiff.String())
+				} else {
+                                	allErrs = append(allErrs, field.Invalid(field.NewPath("clusterNetworkCIDR"),
+                                        	clusterNetworkCIDR.String(), "pod_subnet in acc-provision input(" + clusterDiff.String() + ") has to be the same as clusterNetwork:cidr in install-config.yaml(" + clusterNetworkCIDR.String() + ")"))
+				}
+                        }
+
+			// Validate hostPrefix against pod-subnet-chunk-size
+			hostPrefix := c.Networking.ClusterNetwork[0].HostPrefix
+			inputSubnetSize := GetSubnetSize(hostPrefix)
+			provisionSubnetSize := controllerConfig.PodSubnetChunkSize
+			if inputSubnetSize != provisionSubnetSize {
+				option := UserPrompt(strconv.Itoa(provisionSubnetSize),
+						strconv.Itoa(inputSubnetSize), "pod_subnet_chunk_size", "pod IP pool size obtained from hostPrefix")
+                                if (option == true) {
+                                        prefixFromProvisionSubnetSize := ConvertToPrefix(provisionSubnetSize)
+                                        c.Networking.ClusterNetwork[0].HostPrefix = prefixFromProvisionSubnetSize
+                                        log.Print("Setting clusterNetwork hostPrefix to " + strconv.Itoa(int(prefixFromProvisionSubnetSize)))
+                                } else {
+                                        allErrs = append(allErrs, field.Invalid(field.NewPath("clusterNetworkHostPrefix"),
+                                                strconv.Itoa(int(hostPrefix)), "pod_subnet_chunk_size in acc-provision input(" + strconv.Itoa(provisionSubnetSize) + ") has to be the same as the pod IP pool size obtained from clusterNetwork:hostPrefix in install-config.yaml(" + strconv.Itoa(inputSubnetSize) + ")"))
+                                }
+			}
+		}
+	}
+
 	allErrs = append(allErrs, validatePlatform(&c.Platform, field.NewPath("platform"), openStackValidValuesFetcher, c.Networking, c)...)
 	if c.ControlPlane != nil {
 		allErrs = append(allErrs, validateControlPlane(&c.Platform, c.ControlPlane, field.NewPath("controlPlane"))...)
@@ -104,6 +196,107 @@ func ValidateInstallConfig(c *types.InstallConfig, openStackValidValuesFetcher o
 	}
 
 	return allErrs
+}
+
+func DiffSubnets(sub1 string, sub2 *ipnet.IPNet) *net.IPNet {
+        // Returns first subnet if the subnets are different
+        _, net1, _ := net.ParseCIDR(sub1)
+        if net1.String() != sub2.String() {
+                return net1
+	}
+        return nil
+}
+
+func GetSubnetSize(hostPrefix int32) int {
+	return 1 << (32 - hostPrefix)
+}
+
+func ConvertToPrefix(provisionSubnetSize int) int32 {
+	logValue := math.Log2(float64(provisionSubnetSize))
+	var hostPrefix int32
+	if logValue != float64(int32(logValue)) {
+		hostPrefix = int32(logValue) + 1
+	} else {
+		hostPrefix = int32(logValue)
+	}
+	return 32 - hostPrefix
+}
+
+func UserPrompt(sub1 string, sub2 string, item1 string, item2 string) bool {
+	var option string
+	log.Print("There's a discrepancy between " + item1 + "(" + sub1 + ") in acc-provision input and " + item2 + "(" + sub2 + ") in install-config.yaml")
+	log.Print("Enter Y to use acc-provision value, or N to exit installer and fix acc-provision tar")
+	fmt.Scanln(&option)
+	var op bool
+	if (option == "y" || option == "Y") {
+		op = true
+	}
+	return op
+}
+
+func ExtractTarGz(gzipStream io.Reader) (HostConfigMap, ControllerConfigMap, error) {
+	config := HostConfigMap{}
+	controllerConfig := ControllerConfigMap{}
+        uncompressedStream, err := gzip.NewReader(gzipStream)
+        if err != nil {
+		return config, controllerConfig, err
+        }
+
+        tarReader := tar.NewReader(uncompressedStream)
+
+        for true {
+                header, err := tarReader.Next()
+
+                if err == io.EOF {
+                        break
+                }
+
+                if err != nil {
+			return config, controllerConfig, err
+                }
+
+                switch header.Typeflag {
+                case tar.TypeReg:
+                        temp, err := ioutil.ReadAll(tarReader)
+			if err != nil {
+				return config, controllerConfig, err
+			}
+
+			// Unmarshal acc configmap to get acc-provision values
+                        if strings.Contains(header.Name, "aci-containers-config") {
+                                t := AciContainersConfig{}
+                                err = yaml.Unmarshal(temp, &t)
+                                if err != nil {
+					return config, controllerConfig, err
+                                }
+                                err = yaml.Unmarshal([]byte(t.Data.HostConfig), &config)
+                                if err != nil {
+					return config, controllerConfig, err
+                                }
+				err = yaml.Unmarshal([]byte(t.Data.ControllerConfig), &controllerConfig)
+                                if err != nil {
+                                        return config, controllerConfig, err
+                                }
+				err = checkForParsedConfigValues(config)
+				if err != nil {
+                                        return config, controllerConfig,  err
+                                }
+                        }
+                default:
+			return config, controllerConfig, errors.New("Unsupported file type in tar")
+		}
+
+        }
+        return config, controllerConfig, nil
+}
+
+func checkForParsedConfigValues(config HostConfigMap) error {
+	if config.PodSubnet == "" || config.NodeSubnet == "" ||
+		config.KubeApiVLAN == 0 || config.ServiceVLAN == 0 ||
+			config.InfraVLAN == 0 {
+				return errors.New("One or more values missing from acc-provision tar configmap")
+	}
+	return nil
 }
 
 // ipAddressTypeByField is a map of field path to whether they request IPv4 or IPv6.

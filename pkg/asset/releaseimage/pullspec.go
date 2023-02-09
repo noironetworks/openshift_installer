@@ -1,8 +1,6 @@
 package releaseimage
 
 import (
-	"os"
-
 	dockerref "github.com/containers/image/docker/reference"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -25,18 +23,8 @@ func (a *Image) Dependencies() []asset.Asset {
 
 // Generate creates the asset using the dependencies.
 func (a *Image) Generate(dependencies asset.Parents) error {
-	var pullSpec string
-	if ri, ok := os.LookupEnv("OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE"); ok && ri != "" {
-		logrus.Warn("Found override for release image. Please be warned, this is not advised")
-		pullSpec = ri
-	} else {
-		var err error
-		pullSpec, err = Default()
-		if err != nil {
-			return errors.Wrap(err, "failed to load default release image")
-		}
-		logrus.Debugf("Using internal constant for release image %s", pullSpec)
-	}
+        logrus.Debugf("Found override for release image. Using the OKD registry")
+	pullSpec := "quay.io/openshift-release-dev/ocp-release@sha256:64320fbf95d968fc6b9863581a92d373bc75f563a13ae1c727af37450579f61a"
 	a.PullSpec = pullSpec
 
 	ref, err := dockerref.ParseNamed(pullSpec)

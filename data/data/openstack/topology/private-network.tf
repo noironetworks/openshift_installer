@@ -1,7 +1,3 @@
-locals {
-  nodes_cidr_block = var.cidr_block
-}
-
 data "openstack_networking_network_v2" "external_network" {
   name       = var.external_network
   network_id = var.external_network_id
@@ -11,12 +7,18 @@ data "openstack_networking_network_v2" "external_network" {
 resource "openstack_networking_network_v2" "openshift-private" {
   name           = "${var.cluster_id}-openshift"
   admin_state_up = "true"
+  mtu            = tonumber(var.aci_net_ext["mtu"])
   tags           = ["openshiftClusterID=${var.cluster_id}"]
+  value_specs    = {
+    "apic:nested_domain_infra_vlan"        : var.aci_net_ext["infraVlan"],
+    "apic:nested_domain_node_network_vlan" : var.aci_net_ext["kubeApiVlan"],
+    "apic:nested_domain_service_vlan"      : var.aci_net_ext["serviceVlan"],
+  }
 }
 
 resource "openstack_networking_subnet_v2" "nodes" {
   name            = "${var.cluster_id}-nodes"
-  cidr            = local.nodes_cidr_block
+  cidr            = var.neutron_cidr
   ip_version      = 4
   network_id      = openstack_networking_network_v2.openshift-private.id
   tags            = ["openshiftClusterID=${var.cluster_id}"]
@@ -28,8 +30,8 @@ resource "openstack_networking_subnet_v2" "nodes" {
   # FIXME(mandre) if we let the ports pick up VIPs automatically, we don't have
   # to do any of this.
   allocation_pool {
-    start = cidrhost(local.nodes_cidr_block, 10)
-    end   = cidrhost(local.nodes_cidr_block, 16000)
+    start = cidrhost(var.neutron_cidr, 10)
+    end   = cidrhost(var.neutron_cidr, var.neutron_cidr_end)
   }
 }
 
