@@ -1,68 +1,22 @@
-# OpenShift Installer
-
-## Supported Platforms
-
-* [AWS](docs/user/aws/README.md)
-* [AWS (UPI)](docs/user/aws/install_upi.md)
-* [Azure](docs/user/azure/README.md)
-* [Bare Metal (UPI)](docs/user/metal/install_upi.md)
-* [Bare Metal (IPI)](docs/user/metal/install_ipi.md)
-* [GCP](docs/user/gcp/README.md)
-* [GCP (UPI)](docs/user/gcp/install_upi.md)
-* [Libvirt with KVM](docs/dev/libvirt/README.md) (development only)
-* [OpenStack](docs/user/openstack/README.md)
-* [OpenStack (UPI)](docs/user/openstack/install_upi.md)
-* [Power](docs/user/power/install_upi.md)
-* [oVirt](docs/user/ovirt/install_ipi.md)
-* [oVirt (UPI)](docs/user/ovirt/install_upi.md)
-* [vSphere](docs/user/vsphere/README.md)
-* [vSphere (UPI)](docs/user/vsphere/install_upi.md)
-* [z/VM](docs/user/zvm/install_upi.md)
-
-## Quick Start
-
-First, install all [build dependencies](docs/dev/dependencies.md).
-
-Clone this repository. Then build the `openshift-install` binary with:
-
-```sh
-hack/build.sh
-```
-
-This will create `bin/openshift-install`. This binary can then be invoked to create an OpenShift cluster, like so:
-
-```sh
-bin/openshift-install create cluster
-```
-
-The installer will show a series of prompts for user-specific information and use reasonable defaults for everything else.
-In non-interactive contexts, prompts can be bypassed by [providing an `install-config.yaml`](docs/user/overview.md#multiple-invocations).
-
-If you have trouble, refer to [the troubleshooting guide](docs/user/troubleshooting.md).
-
-### Connect to the cluster
-
-Details for connecting to your new cluster are printed by the `openshift-install` binary upon completion, and are also available in the `.openshift_install.log` file.
-
-Example output:
-
-```sh
-INFO Waiting 10m0s for the openshift-console route to be created...
-INFO Install complete!
-INFO To access the cluster as the system:admin user when using 'oc', run
-    export KUBECONFIG=/path/to/installer/auth/kubeconfig
-INFO Access the OpenShift web-console here: https://console-openshift-console.apps.${CLUSTER_NAME}.${BASE_DOMAIN}:6443
-INFO Login to the console with user: kubeadmin, password: 5char-5char-5char-5char
-```
-
-### Cleanup
-
-Destroy the cluster and release associated resources with:
-
-```sh
-openshift-install destroy cluster
-```
-
-Note that you almost certainly also want to clean up the installer state files too, including `auth/`, `terraform.tfstate`, etc.
-The best thing to do is always pass the `--dir` argument to `create` and `destroy`.
-And if you want to reinstall from scratch, `rm -rf` the asset directory beforehand.
+OpenShift Install Guides
+------------------------
+* [Installing OpenShift 4.10 on a Bare Metal Server](https://www.cisco.com/content/en/us/td/docs/dcn/aci/containers/installation/installing-openshift-4-10-on-baremetal.html) 
+* [Installing OpenShift 4.9 on a Bare Metal Server](https://www.cisco.com/content/en/us/td/docs/dcn/aci/containers/installation/installing-openshift-4-9-on-baremetal.html)
+* [Installing OpenShift 4.8 on a Bare Metal Server](https://www.cisco.com/content/en/us/td/docs/dcn/aci/containers/installation/installing-openshift-4-8-on-baremetal.html)
+* [Installing OpenShift 4.7 on a Bare Metal Server](https://www.cisco.com/content/en/us/td/docs/dcn/aci/containers/installation/installing-openshift-4-7-on-baremetal.html)
+* [Installing OpenShift 4.6 on a Bare Metal Server](https://www.cisco.com/content/en/us/td/docs/dcn/aci/containers/installation/installing-openshift-4-6-on-baremetal.html)
+* [Installing OpenShift 4.11 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-openshift-4-11-on-vmware-vsphere.html)
+* [Installing OpenShift 4.10 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-openshift-4-10-on-vmware-vsphere.html)
+* [Installing OpenShift 4.9 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-openshift-4-9-on-vmware-vsphere.html)
+* [Installing OpenShift 4.8 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-openshift-4-8-on-vmware-vsphere.html)
+* [Installing OpenShift 4.7 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-openshift-4-7-on-vmware-vsphere.html)
+* [Installing OpenShift 4.6 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/installing-openshift-4dot6-on-vmware-vsphere.html)
+* [Installing OpenShift 4.5 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/installing-openshift-4dot5-on-vmware-vsphere.html)
+* [Installing OpenShift 4.11 on OpenStack 16.2](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-11-on-openstack-16-2.html)
+* [Installing OpenShift 4.10 on OpenStack 16.2](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-10-on-openstack-16-2.html)
+* [Installing OpenShift 4.9 on OpenStack 16.2](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-9-on-openstack-16-2.html)
+* [Installing OpenShift 4.8 on OpenStack 16.2](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-8-on-openstack-16-2.html)
+* [Installing OpenShift 4.8 on OpenStack 16.1](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-8-on-openstack-16-1.html)
+* [Installing OpenShift 4.6 on OpenStack 16.1](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/installing-openshift-4dot6-on-openstack-16-1.html)
+* [Installing OpenShift 4.6 on OpenStack 13](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/installing-openshift-4dot6-on-openstack-13.html)
+* [Installing OpenShift 4.5 on OpenStack 13](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/installing-openshift-4dot5-on-openstack-13.html)
