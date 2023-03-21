@@ -155,7 +155,7 @@ require (
 	gopkg.in/ini.v1 v1.42.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/api v0.0.0-20190620084959-7cf5895f2711 // indirect
-	k8s.io/apimachinery v0.0.0-20190913080033-27d36303b655 // indirect
+	k8s.io/apimachinery v0.15.7 // indirect
 	k8s.io/client-go v10.0.0+incompatible // indirect
 	k8s.io/klog v0.4.0 // indirect
 	k8s.io/utils v0.0.0-20200411171748-3d5a2fe318e4 // indirect
