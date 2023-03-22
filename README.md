@@ -1,3 +1,7 @@
+layout: page
+title: "OpenShift Install Guides"
+permalink: /openshift_installer
+
 OpenShift Install Guides
 ------------------------
 * [Installing OpenShift 4.10 on a Bare Metal Server](https://www.cisco.com/content/en/us/td/docs/dcn/aci/containers/installation/installing-openshift-4-10-on-baremetal.html) 
