@@ -1,2 +1,2 @@
 title: Openshift Installer
-exclude: [/terraform]
+exclude: [/terraform, /upi]
