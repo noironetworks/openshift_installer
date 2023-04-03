@@ -1,0 +1,11 @@
+- hosts: all
+  gather_facts: no
+  tasks:
+
+  - name: Ensure Octavia is disabled
+    lineinfile:
+      path: "{{ playbook_dir }}/manifests/cloud-provider-config.yaml"
+      regexp: '(\s+)use-octavia = .+'
+      line: '\1use-octavia = false'
+      backrefs: yes
+    when: os_networking_type == "CiscoACI"
