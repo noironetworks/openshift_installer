@@ -1,4 +1,0 @@
-{{if .PlatformData.VSphere.UserProvidedVIPs}}
-[main]
-rc-manager=unmanaged
-{{end}}
