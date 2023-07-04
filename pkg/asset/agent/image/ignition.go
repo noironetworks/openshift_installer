@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/coreos/ignition/v2/config/util"
@@ -61,7 +60,9 @@ type agentTemplateData struct {
 	HaveMirrorConfig          bool
 	PublicContainerRegistries string
 	InfraEnvID                string
+	ClusterName               string
 	OSImage                   *models.OsImage
+	Proxy                     *v1beta1.Proxy
 }
 
 // Name returns the human-friendly name of the asset.
@@ -133,7 +134,7 @@ func (a *Ignition) Generate(dependencies asset.Parents) error {
 
 	publicContainerRegistries := getPublicContainerRegistries(registriesConfig)
 
-	releaseImageMirror := getMirrorFromRelease(agentManifests.ClusterImageSet.Spec.ReleaseImage, registriesConfig)
+	releaseImageMirror := mirror.GetMirrorFromRelease(agentManifests.ClusterImageSet.Spec.ReleaseImage, registriesConfig)
 
 	infraEnvID := uuid.New().String()
 	logrus.Debug("Generated random infra-env id ", infraEnvID)
@@ -144,7 +145,12 @@ func (a *Ignition) Generate(dependencies asset.Parents) error {
 	}
 	a.CPUArch = *osImage.CPUArchitecture
 
+	clusterName := fmt.Sprintf("%s.%s",
+		agentManifests.ClusterDeployment.Spec.ClusterName,
+		agentManifests.ClusterDeployment.Spec.BaseDomain)
+
 	agentTemplateData := getTemplateData(
+		clusterName,
 		agentManifests.GetPullSecretData(),
 		nodeZeroIP,
 		releaseImageList,
@@ -154,7 +160,8 @@ func (a *Ignition) Generate(dependencies asset.Parents) error {
 		publicContainerRegistries,
 		agentManifests.AgentClusterInstall,
 		infraEnvID,
-		osImage)
+		osImage,
+		infraEnv.Spec.Proxy)
 
 	err = bootstrap.AddStorageFiles(&config, "/", "agent/files", agentTemplateData)
 	if err != nil {
@@ -214,6 +221,7 @@ func (a *Ignition) Generate(dependencies asset.Parents) error {
 		"selinux.service",
 		"set-hostname.service",
 		"start-cluster-installation.service",
+		"install-status.service",
 	}
 
 	// Enable pre-network-manager-config.service only when there are network configs defined
@@ -241,11 +249,12 @@ func (a *Ignition) Generate(dependencies asset.Parents) error {
 	return nil
 }
 
-func getTemplateData(pullSecret, nodeZeroIP, releaseImageList, releaseImage,
+func getTemplateData(name, pullSecret, nodeZeroIP, releaseImageList, releaseImage,
 	releaseImageMirror string, haveMirrorConfig bool, publicContainerRegistries string,
 	agentClusterInstall *hiveext.AgentClusterInstall,
 	infraEnvID string,
-	osImage *models.OsImage) *agentTemplateData {
+	osImage *models.OsImage,
+	proxy *v1beta1.Proxy) *agentTemplateData {
 	serviceBaseURL := url.URL{
 		Scheme: "http",
 		Host:   net.JoinHostPort(nodeZeroIP, "8090"),
@@ -267,7 +276,9 @@ func getTemplateData(pullSecret, nodeZeroIP, releaseImageList, releaseImage,
 		HaveMirrorConfig:          haveMirrorConfig,
 		PublicContainerRegistries: publicContainerRegistries,
 		InfraEnvID:                infraEnvID,
+		ClusterName:               name,
 		OSImage:                   osImage,
+		Proxy:                     proxy,
 	}
 }
 
@@ -467,23 +478,6 @@ func RetrieveRendezvousIP(agentConfig *agent.Config, nmStateConfigs []*v1beta1.N
 		err = errors.New("missing rendezvousIP in agent-config or at least one NMStateConfig manifest")
 	}
 	return rendezvousIP, err
-}
-
-func getMirrorFromRelease(releaseImage string, registriesConfig *mirror.RegistriesConf) string {
-	source := regexp.MustCompile(`^(.+?)(@sha256)?:(.+)`).FindStringSubmatch(releaseImage)
-	for _, config := range registriesConfig.MirrorConfig {
-		if config.Location == source[1] {
-			// include the tag with the build release image
-			if len(source) == 4 {
-				// Has Sha256
-				return fmt.Sprintf("%s%s:%s", config.Mirror, source[2], source[3])
-			} else if len(source) == 3 {
-				return fmt.Sprintf("%s:%s", config.Mirror, source[2])
-			}
-		}
-	}
-
-	return ""
 }
 
 func getPublicContainerRegistries(registriesConfig *mirror.RegistriesConf) string {

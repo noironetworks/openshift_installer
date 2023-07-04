@@ -1,15 +1,16 @@
 package manifests
 
 import (
-	"github.com/openshift/installer/pkg/types"
 	"os"
 	"testing"
 
+	"github.com/openshift/installer/pkg/types"
+
 	"github.com/golang/mock/gomock"
+	configv1 "github.com/openshift/api/config/v1"
 	hiveext "github.com/openshift/assisted-service/api/hiveextension/v1beta1"
 	hivev1 "github.com/openshift/hive/apis/hive/v1"
 	"github.com/openshift/installer/pkg/asset"
-	"github.com/openshift/installer/pkg/types/baremetal"
 
 	"github.com/openshift/installer/pkg/asset/agent"
 	"github.com/openshift/installer/pkg/asset/mock"
@@ -43,6 +44,19 @@ func TestAgentClusterInstall_Generate(t *testing.T) {
 	goodACIDualStackVIPs := getGoodACIDualStack()
 	goodACIDualStackVIPs.SetAnnotations(map[string]string{
 		installConfigOverrides: `{"platform":{"baremetal":{"apiVIPs":["192.168.122.10","2001:db8:1111:2222:ffff:ffff:ffff:cafe"],"ingressVIPs":["192.168.122.11","2001:db8:1111:2222:ffff:ffff:ffff:dead"]}}}`,
+	})
+
+	installConfigWithCapabilities := getValidOptionalInstallConfig()
+	installConfigWithCapabilities.Config.Capabilities = &types.Capabilities{
+		BaselineCapabilitySet: configv1.ClusterVersionCapabilitySetNone,
+		AdditionalEnabledCapabilities: []configv1.ClusterVersionCapability{
+			configv1.ClusterVersionCapabilityMarketplace,
+		},
+	}
+
+	goodCapabilitiesACI := getGoodACI()
+	goodCapabilitiesACI.SetAnnotations(map[string]string{
+		installConfigOverrides: `{"capabilities":{"baselineCapabilitySet":"None","additionalEnabledCapabilities":["marketplace"]}}`,
 	})
 
 	cases := []struct {
@@ -100,6 +114,13 @@ func TestAgentClusterInstall_Generate(t *testing.T) {
 			},
 			expectedConfig: goodACIDualStackVIPs,
 		},
+		{
+			name: "valid configuration with capabilities",
+			dependencies: []asset.Asset{
+				installConfigWithCapabilities,
+			},
+			expectedConfig: goodCapabilitiesACI,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -151,6 +172,76 @@ metadata:
 spec:
   apiVIP: 192.168.111.5
   ingressVIP: 192.168.111.4
+  platformType: BareMetal
+  clusterDeploymentRef:
+    name: ostest
+  imageSetRef:
+    name: openshift-v4.10.0
+  networking:
+    machineNetwork:
+    - cidr: 10.10.11.0/24
+    clusterNetwork:
+    - cidr: 10.128.0.0/14
+      hostPrefix: 23
+    serviceNetwork:
+    - 172.30.0.0/16
+    networkType: OVNKubernetes
+  provisionRequirements:
+    controlPlaneAgents: 3
+    workerAgents: 2
+  sshPublicKey: |
+    ssh-rsa AAAAmyKey`,
+			expectedFound: true,
+			expectedConfig: &hiveext.AgentClusterInstall{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-agent-cluster-install",
+					Namespace: "cluster0",
+				},
+				Spec: hiveext.AgentClusterInstallSpec{
+					APIVIP:       "192.168.111.5",
+					IngressVIP:   "192.168.111.4",
+					PlatformType: hiveext.BareMetalPlatformType,
+					ClusterDeploymentRef: corev1.LocalObjectReference{
+						Name: "ostest",
+					},
+					ImageSetRef: &hivev1.ClusterImageSetReference{
+						Name: "openshift-v4.10.0",
+					},
+					Networking: hiveext.Networking{
+						MachineNetwork: []hiveext.MachineNetworkEntry{
+							{
+								CIDR: "10.10.11.0/24",
+							},
+						},
+						ClusterNetwork: []hiveext.ClusterNetworkEntry{
+							{
+								CIDR:       "10.128.0.0/14",
+								HostPrefix: 23,
+							},
+						},
+						ServiceNetwork: []string{
+							"172.30.0.0/16",
+						},
+						NetworkType: "OVNKubernetes",
+					},
+					ProvisionRequirements: hiveext.ProvisionRequirements{
+						ControlPlaneAgents: 3,
+						WorkerAgents:       2,
+					},
+					SSHPublicKey: "ssh-rsa AAAAmyKey",
+				},
+			},
+			expectedError: "",
+		},
+		{
+			name: "lowercase-platform-type-backwards-compat",
+			data: `
+metadata:
+  name: test-agent-cluster-install
+  namespace: cluster0
+spec:
+  apiVIP: 192.168.111.5
+  ingressVIP: 192.168.111.4
   platformType: baremetal
   clusterDeploymentRef:
     name: ostest
@@ -179,7 +270,7 @@ spec:
 				Spec: hiveext.AgentClusterInstallSpec{
 					APIVIP:       "192.168.111.5",
 					IngressVIP:   "192.168.111.4",
-					PlatformType: hiveext.PlatformType(baremetal.Name),
+					PlatformType: hiveext.BareMetalPlatformType,
 					ClusterDeploymentRef: corev1.LocalObjectReference{
 						Name: "ostest",
 					},
@@ -505,7 +596,7 @@ spec:
   sshPublicKey: |
     ssh-rsa AAAAmyKey`,
 			expectedFound: false,
-			expectedError: "invalid PlatformType configured: spec.platformType: Unsupported value: \"aws\": supported values: \"baremetal\", \"vsphere\", \"none\"",
+			expectedError: "invalid PlatformType configured: spec.platformType: Unsupported value: \"aws\": supported values: \"BareMetal\", \"VSphere\", \"None\"",
 		},
 	}
 	for _, tc := range cases {

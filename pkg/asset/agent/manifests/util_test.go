@@ -24,6 +24,45 @@ var (
 	testSSHKey = `|
 	ssh-rsa AAAAB3NzaC1y1LJe3zew1ghc= root@localhost.localdomain`
 	testSecret = `{"auths":{"cloud.openshift.com":{"auth":"b3BlUTA=","email":"test@redhat.com"}}}`
+
+	rawNMStateConfig = `
+    interfaces:
+      - name: eth0
+        type: ethernet
+        state: up
+        mac-address: 52:54:01:aa:aa:a1
+        ipv4:
+          enabled: true
+          address:
+            - ip: 192.168.122.21
+              prefix-length: 24
+          dhcp: false
+    dns-resolver:
+      config:
+        server:
+          - 192.168.122.1
+    routes:
+      config:
+        - destination: 0.0.0.0/0
+          next-hop-address: 192.168.122.1
+          next-hop-interface: eth0
+          table-id: 254`
+
+	rawNMStateConfigNoIP = `
+    interfaces:
+      - name: eth0
+        type: ethernet
+        state: up
+        mac-address: 52:54:01:aa:aa:a1`
+
+	// config with route but no interface is invalid
+	invalidRawNMStateConfig = `
+    routes:
+      config:
+        - destination: 0.0.0.0/0
+          next-hop-address: 192.168.122.1
+          next-hop-interface: eth0
+          table-id: 254`
 )
 
 // GetValidOptionalInstallConfig returns a valid optional install config
@@ -205,7 +244,7 @@ func getValidAgentConfig() *agentconfig.AgentConfig {
 						},
 					},
 					NetworkConfig: v1beta1.NetConfig{
-						Raw: unmarshalJSON([]byte("interfaces:")),
+						Raw: unmarshalJSON([]byte(rawNMStateConfig)),
 					},
 				},
 				{
@@ -230,7 +269,7 @@ func getValidAgentConfig() *agentconfig.AgentConfig {
 						},
 					},
 					NetworkConfig: v1beta1.NetConfig{
-						Raw: unmarshalJSON([]byte("interfaces:")),
+						Raw: unmarshalJSON([]byte(rawNMStateConfig)),
 					},
 				},
 				{
@@ -255,7 +294,7 @@ func getValidAgentConfig() *agentconfig.AgentConfig {
 						},
 					},
 					NetworkConfig: v1beta1.NetConfig{
-						Raw: unmarshalJSON([]byte("interfaces:")),
+						Raw: unmarshalJSON([]byte(rawNMStateConfig)),
 					},
 				},
 			},
@@ -323,7 +362,7 @@ func getValidDHCPAgentConfigWithSomeHostsWithoutNetworkConfig() *agentconfig.Age
 						},
 					},
 					NetworkConfig: v1beta1.NetConfig{
-						Raw: unmarshalJSON([]byte("interfaces:")),
+						Raw: unmarshalJSON([]byte(rawNMStateConfigNoIP)),
 					},
 				},
 				{
@@ -388,10 +427,37 @@ func getGoodACI() *hiveext.AgentClusterInstall {
 			},
 			APIVIP:       "192.168.122.10",
 			IngressVIP:   "192.168.122.11",
-			PlatformType: hiveext.PlatformType(baremetal.Name),
+			PlatformType: hiveext.BareMetalPlatformType,
 		},
 	}
 	return goodACI
+}
+
+func getInValidAgentConfig() *agentconfig.AgentConfig {
+	return &agentconfig.AgentConfig{
+		Config: &agenttypes.Config{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "ocp-edge-cluster-0",
+				Namespace: "cluster-0",
+			},
+			RendezvousIP: "192.168.122.2",
+			Hosts: []agenttypes.Host{
+				{
+					Hostname: "control-0.example.org",
+					Role:     "master",
+					Interfaces: []*v1beta1.Interface{
+						{
+							Name:       "enp2s0",
+							MacAddress: "98:af:65:a5:8d:01",
+						},
+					},
+					NetworkConfig: v1beta1.NetConfig{
+						Raw: unmarshalJSON([]byte(invalidRawNMStateConfig)),
+					},
+				},
+			},
+		},
+	}
 }
 
 func getGoodACIDualStack() *hiveext.AgentClusterInstall {

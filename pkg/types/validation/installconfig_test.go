@@ -1665,6 +1665,23 @@ func TestValidateInstallConfig(t *testing.T) {
 			expectedError: "platform.baremetal.ingressVIPs: Invalid value: \"2001::1\": IP expected to be in one of the machine networks: 10.0.0.0/16,fe80::/10",
 		},
 		{
+			name: "vsphere_ingressvip_v4_not_in_machinenetwork_cidr",
+			installConfig: func() *types.InstallConfig {
+				c := validInstallConfig()
+				c.Networking.MachineNetwork = []types.MachineNetworkEntry{
+					{CIDR: *ipnet.MustParseCIDR("10.0.0.0/16")},
+					{CIDR: *ipnet.MustParseCIDR("fe80::/10")},
+				}
+				c.Platform = types.Platform{
+					VSphere: validVSpherePlatform(),
+				}
+				c.Platform.VSphere.IngressVIPs = []string{"192.168.222.4"}
+				c.Platform.VSphere.APIVIPs = []string{"192.168.1.0"}
+
+				return c
+			}(),
+		},
+		{
 			name: "too_many_ingressvips",
 			installConfig: func() *types.InstallConfig {
 				c := validInstallConfig()
@@ -1998,6 +2015,71 @@ func TestValidateInstallConfig(t *testing.T) {
 				return c
 			}(),
 			expectedError: "platform.vsphere.apiVIPs: Required value: must specify VIP for API, when VIP for ingress is set",
+		},
+		{
+			name: "GCP Create Firewall Rules should return error if used WITHOUT tech preview when not enabled",
+			installConfig: func() *types.InstallConfig {
+				c := validInstallConfig()
+				c.Platform = types.Platform{
+					GCP: validGCPPlatform(),
+				}
+				c.GCP.CreateFirewallRules = gcp.CreateFirewallRulesDisabled
+
+				return c
+			}(),
+			expectedError: "platform.gcp.createFirewallRules: Forbidden: the TechPreviewNoUpgrade feature set must be enabled to use this field",
+		},
+		{
+			name: "GCP BYO PUBLIC DNS SHOULD return error if used WITHOUT tech preview",
+			installConfig: func() *types.InstallConfig {
+				c := validInstallConfig()
+				c.Platform = types.Platform{
+					GCP: validGCPPlatform(),
+				}
+				c.Platform.GCP.PublicDNSZone = &gcp.DNSZone{
+					ID:        "myZone",
+					ProjectID: "myProject",
+				}
+
+				return c
+			}(),
+			expectedError: "platform.gcp.publicDNSZone.projectID: Forbidden: the TechPreviewNoUpgrade feature set must be enabled to use this field",
+		},
+		{
+			name: "GCP BYO PRIVATE DNS SHOULD return error if used WITHOUT tech preview",
+			installConfig: func() *types.InstallConfig {
+				c := validInstallConfig()
+				c.Platform = types.Platform{
+					GCP: validGCPPlatform(),
+				}
+				c.Platform.GCP.PrivateDNSZone = &gcp.DNSZone{
+					ID:        "myZone",
+					ProjectID: "myProject",
+				}
+
+				return c
+			}(),
+			expectedError: "platform.gcp.privateDNSZone.projectID: Forbidden: the TechPreviewNoUpgrade feature set must be enabled to use this field",
+		},
+		{
+			name: "GCP BYO DNS should NOT return error if used WITH tech preview",
+			installConfig: func() *types.InstallConfig {
+				c := validInstallConfig()
+				c.Platform = types.Platform{
+					GCP: validGCPPlatform(),
+				}
+				c.Platform.GCP.PublicDNSZone = &gcp.DNSZone{
+					ID:        "myZone",
+					ProjectID: "myProject",
+				}
+				c.Platform.GCP.PrivateDNSZone = &gcp.DNSZone{
+					ID:        "myZone",
+					ProjectID: "myProject",
+				}
+				c.FeatureSet = "TechPreviewNoUpgrade"
+
+				return c
+			}(),
 		},
 	}
 	for _, tc := range cases {

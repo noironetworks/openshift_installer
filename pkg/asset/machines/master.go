@@ -138,7 +138,6 @@ func (m *Master) Dependencies() []asset.Asset {
 		&installconfig.PlatformCredsCheck{},
 		&installconfig.InstallConfig{},
 		new(rhcos.Image),
-		new(rhcos.Release),
 		&machine.Master{},
 	}
 }
@@ -149,9 +148,8 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 	clusterID := &installconfig.ClusterID{}
 	installConfig := &installconfig.InstallConfig{}
 	rhcosImage := new(rhcos.Image)
-	rhcosRelease := new(rhcos.Release)
 	mign := &machine.Master{}
-	dependencies.Get(clusterID, installConfig, rhcosImage, rhcosRelease, mign)
+	dependencies.Get(clusterID, installConfig, rhcosImage, mign)
 
 	masterUserDataSecretName := "master-user-data"
 
@@ -370,8 +368,9 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		if err != nil {
 			return err
 		}
+		useImageGallery := installConfig.Azure.CloudName != azuretypes.StackCloud
 
-		machines, err = azure.Machines(clusterID.InfraID, ic, &pool, string(*rhcosImage), "master", masterUserDataSecretName, capabilities, rhcosRelease.GetAzureReleaseVersion())
+		machines, err = azure.Machines(clusterID.InfraID, ic, &pool, string(*rhcosImage), "master", masterUserDataSecretName, capabilities, useImageGallery)
 		if err != nil {
 			return errors.Wrap(err, "failed to create master machine objects")
 		}
@@ -618,6 +617,17 @@ func (m *Master) Load(f asset.FileFetcher) (found bool, err error) {
 	}
 	m.MachineFiles = fileList
 
+	file, err = f.FetchByName(filepath.Join(directory, controlPlaneMachineSetFileName))
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Choosing to ignore the CPMS file if it does not exist since UPI does not need it.
+			logrus.Debugf("CPMS file missing. Ignoring it while loading machine asset.")
+			return true, nil
+		}
+		return true, err
+	}
+	m.ControlPlaneMachineSet = file
+
 	return true, nil
 }
 
@@ -639,6 +649,7 @@ func (m *Master) Machines() ([]machinev1beta1.Machine, error) {
 		&machinev1.AlibabaCloudMachineProviderConfig{},
 		&machinev1.NutanixMachineProviderConfig{},
 		&machinev1.PowerVSMachineProviderConfig{},
+		&machinev1.ControlPlaneMachineSet{},
 	)
 
 	machinev1beta1.AddToScheme(scheme)
@@ -680,7 +691,7 @@ func IsMachineManifest(file *asset.File) bool {
 		return false
 	}
 	filename := filepath.Base(file.Filename)
-	if filename == masterUserDataFileName || filename == workerUserDataFileName {
+	if filename == masterUserDataFileName || filename == workerUserDataFileName || filename == controlPlaneMachineSetFileName {
 		return true
 	}
 	if matched, err := machineconfig.IsManifest(filename); err != nil {

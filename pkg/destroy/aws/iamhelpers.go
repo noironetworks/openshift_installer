@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -39,13 +40,25 @@ func (search *iamRoleSearch) find(ctx context.Context) (arns []string, names []s
 				// Unfortunately role.Tags is empty from ListRoles, so we need to query each one
 				response, err := search.client.GetRoleWithContext(ctx, &iam.GetRoleInput{RoleName: role.RoleName})
 				if err != nil {
-					if err.(awserr.Error).Code() == iam.ErrCodeNoSuchEntityException {
-						search.unmatched[*role.Arn] = exists
-					} else {
-						if lastError != nil {
-							search.logger.Debug(lastError)
+					var awsErr awserr.Error
+					if errors.As(err, &awsErr) {
+						switch {
+						case awsErr.Code() == iam.ErrCodeNoSuchEntityException:
+							// The IAM role does not exist.
+							// Ignore this IAM Role and donot report this error via
+							// lastError
+							search.unmatched[*role.Arn] = exists
+						case strings.Contains(err.Error(), "AccessDenied"):
+							// Installer does not have access to this IAM role
+							// Ignore this IAM Role and donot report this error via
+							// lastError
+							search.unmatched[*role.Arn] = exists
+						default:
+							if lastError != nil {
+								search.logger.Debug(lastError)
+							}
+							lastError = errors.Wrapf(err, "get tags for %s", *role.Arn)
 						}
-						lastError = errors.Wrapf(err, "get tags for %s", *role.Arn)
 					}
 				} else {
 					role = response.Role

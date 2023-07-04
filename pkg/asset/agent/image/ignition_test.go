@@ -80,7 +80,15 @@ func TestIgnition_getTemplateData(t *testing.T) {
 		Version:          &ver,
 	}
 
-	templateData := getTemplateData(pullSecret, nodeZeroIP, releaseImageList, releaseImage, releaseImageMirror, haveMirrorConfig, publicContainerRegistries, agentClusterInstall, infraEnvID, osImage)
+	proxy := &aiv1beta1.Proxy{
+		HTTPProxy:  "http://1.1.1.1:80",
+		HTTPSProxy: "https://1.1.1.1:443",
+		NoProxy:    "valid-proxy.com,172.30.0.0/16",
+	}
+	clusterName := "test-agent-cluster-install.test"
+
+	templateData := getTemplateData(clusterName, pullSecret, nodeZeroIP, releaseImageList, releaseImage, releaseImageMirror, haveMirrorConfig, publicContainerRegistries, agentClusterInstall, infraEnvID, osImage, proxy)
+	assert.Equal(t, clusterName, templateData.ClusterName)
 	assert.Equal(t, "http", templateData.ServiceProtocol)
 	assert.Equal(t, "http://"+nodeZeroIP+":8090/", templateData.ServiceBaseURL)
 	assert.Equal(t, pullSecret, templateData.PullSecret)
@@ -96,6 +104,7 @@ func TestIgnition_getTemplateData(t *testing.T) {
 	assert.Equal(t, publicContainerRegistries, templateData.PublicContainerRegistries)
 	assert.Equal(t, infraEnvID, templateData.InfraEnvID)
 	assert.Equal(t, osImage, templateData.OSImage)
+	assert.Equal(t, proxy, templateData.Proxy)
 }
 
 func TestIgnition_addStaticNetworkConfig(t *testing.T) {
@@ -389,6 +398,8 @@ metadata:
 				"/usr/local/bin/agent-gather",
 				"/usr/local/bin/extract-agent.sh",
 				"/usr/local/bin/get-container-images.sh",
+				"/usr/local/bin/install-status.sh",
+				"/usr/local/bin/issue_status.sh",
 				"/usr/local/bin/set-hostname.sh",
 				"/usr/local/bin/start-agent.sh",
 				"/usr/local/bin/start-cluster-installation.sh",
@@ -657,7 +668,7 @@ func TestIgnition_getMirrorFromRelease(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 
-			mirror := getMirrorFromRelease(tc.release, &tc.registriesConf)
+			mirror := mirror.GetMirrorFromRelease(tc.release, &tc.registriesConf)
 
 			assert.Equal(t, tc.expectedMirror, mirror)
 
