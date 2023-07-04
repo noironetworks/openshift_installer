@@ -85,7 +85,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
-	golang.org/x/sys v0.0.0-20211029165221-6e7872819dc8
+	golang.org/x/sys v0.0.0-20220517195934-5e4e11fc645e
 	google.golang.org/api v0.44.0
 	google.golang.org/genproto v0.0.0-20210831024726-fe130286e0e2
 	google.golang.org/grpc v1.40.0
@@ -128,7 +128,7 @@ require (
 	github.com/IBM/push-notifications-go-sdk v0.0.0-20210310100607-5790b96c47f5 // indirect
 	github.com/IBM/schematics-go-sdk v0.0.2 // indirect
 	github.com/IBM/secrets-manager-go-sdk v0.1.19 // indirect
-	github.com/Masterminds/goutils v1.1.0 // indirect
+	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667 // indirect
@@ -359,7 +359,7 @@ replace (
 	cloud.google.com/go => cloud.google.com/go v0.57.0
 	github.com/IBM-Cloud/terraform-provider-ibm => github.com/openshift/terraform-provider-ibm v1.26.2-openshift-2
 	github.com/go-log/log => github.com/go-log/log v0.1.1-0.20181211034820-a514cf01a3eb // Pinned by MCO
-	github.com/gophercloud/gophercloud => github.com/gophercloud/gophercloud v0.17.0
+	github.com/gophercloud/gophercloud => github.com/gophercloud/gophercloud v0.18.0
 	github.com/hashicorp/terraform => github.com/openshift/hashicorp-terraform v0.14.6-openshift-1 // Pin to fork with deduplicated rpc types v0.14.6-openshift-1
 	github.com/hashicorp/terraform-plugin-sdk => github.com/openshift/hashicorp-terraform-plugin-sdk v1.16.0-openshift // Pin to fork with public rpc types
 	github.com/hashicorp/terraform-provider-vsphere => github.com/openshift/terraform-provider-vsphere v1.24.3-openshift
@@ -369,6 +369,7 @@ replace (
 	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20211209144617-7385dd6338e3 // Pin client-go
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20201009041932-4fe8559913b8 // Pin MCO so it doesn't get downgraded
 	github.com/spf13/afero => github.com/spf13/afero v1.2.2
+	github.com/tencentcloud/tencentcloud-sdk-go v3.0.82+incompatible => github.com/tencentcloud/tencentcloud-sdk-go v1.0.191 // https://github.com/hashicorp/terraform/issues/29021
 	github.com/terraform-providers/terraform-provider-aws => github.com/openshift/terraform-provider-aws v1.60.1-0.20211215220004-24df6d73af46 // Pin to openshift fork with tag v3.1.0-openshift-2
 	github.com/terraform-providers/terraform-provider-azurerm => github.com/openshift/terraform-provider-azurerm v1.44.1-0.20210224232508-7509319df0f4 // Pin to 2.48.0-openshift
 	github.com/terraform-providers/terraform-provider-azurestack => github.com/openshift/terraform-provider-azurestack v0.10.0-openshift // Use OpenShift fork
@@ -397,7 +398,6 @@ replace (
 	github.com/go-openapi/errors => github.com/go-openapi/errors v0.19.2
 	github.com/go-openapi/spec => github.com/go-openapi/spec v0.19.4
 	github.com/go-openapi/validate => github.com/go-openapi/validate v0.19.8
-	github.com/hashicorp/go-getter => github.com/hashicorp/go-getter v1.5.2
 	github.com/hashicorp/go-plugin => github.com/hashicorp/go-plugin v1.3.0
 	github.com/hashicorp/terraform-plugin-test/v2 => github.com/hashicorp/terraform-plugin-test/v2 v2.2.0
 	github.com/ulikunitz/xz => github.com/ulikunitz/xz v0.5.7
@@ -405,3 +405,8 @@ replace (
 	google.golang.org/genproto => google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 	google.golang.org/grpc => google.golang.org/grpc v1.35.0
 )
+
+replace github.com/hashicorp/go-getter => github.com/hashicorp/go-getter v1.6.2
+
+// https://issues.redhat.com/browse/OCPBUGS-5663
+replace github.com/Masterminds/goutils => github.com/Masterminds/goutils v1.1.1

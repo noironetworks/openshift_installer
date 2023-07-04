@@ -1,15 +1,19 @@
 package gcp
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	compute "google.golang.org/api/compute/v1"
 	dns "google.golang.org/api/dns/v1"
+	"google.golang.org/api/googleapi"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/openshift/installer/pkg/asset/installconfig/gcp/mock"
 	"github.com/openshift/installer/pkg/ipnet"
@@ -22,7 +26,9 @@ type editFunctions []func(ic *types.InstallConfig)
 var (
 	validNetworkName   = "valid-vpc"
 	validProjectName   = "valid-project"
+	invalidProjectName = "invalid-project"
 	validRegion        = "us-east1"
+	invalidRegion      = "us-east4"
 	validZone          = "us-east1-b"
 	validComputeSubnet = "valid-compute-subnet"
 	validCPSubnet      = "valid-controlplane-subnet"
@@ -61,8 +67,8 @@ var (
 	invalidateNetwork       = func(ic *types.InstallConfig) { ic.GCP.Network = "invalid-vpc" }
 	invalidateComputeSubnet = func(ic *types.InstallConfig) { ic.GCP.ComputeSubnet = "invalid-compute-subnet" }
 	invalidateCPSubnet      = func(ic *types.InstallConfig) { ic.GCP.ControlPlaneSubnet = "invalid-cp-subnet" }
-	invalidateRegion        = func(ic *types.InstallConfig) { ic.GCP.Region = "us-east4" }
-	invalidateProject       = func(ic *types.InstallConfig) { ic.GCP.ProjectID = "invalid-project" }
+	invalidateRegion        = func(ic *types.InstallConfig) { ic.GCP.Region = invalidRegion }
+	invalidateProject       = func(ic *types.InstallConfig) { ic.GCP.ProjectID = invalidProjectName }
 	removeVPC               = func(ic *types.InstallConfig) { ic.GCP.Network = "" }
 	removeSubnets           = func(ic *types.InstallConfig) { ic.GCP.ComputeSubnet, ic.GCP.ControlPlaneSubnet = "", "" }
 	invalidClusterName      = func(ic *types.InstallConfig) { ic.ObjectMeta.Name = "testgoogletest" }
@@ -227,6 +233,24 @@ func TestGCPInstallConfigValidation(t *testing.T) {
 			expectedError:  true,
 			expectedErrMsg: "platform.gcp.project: Invalid value: \"invalid-project\": invalid project ID",
 		},
+		{
+			name:           "Valid Region",
+			edits:          editFunctions{},
+			expectedError:  false,
+			expectedErrMsg: "",
+		},
+		{
+			name:           "Invalid region not found",
+			edits:          editFunctions{invalidateRegion, invalidateProject},
+			expectedError:  true,
+			expectedErrMsg: "platform.gcp.project: Invalid value: \"invalid-project\": invalid project ID",
+		},
+		{
+			name:           "Region not validated",
+			edits:          editFunctions{invalidateRegion},
+			expectedError:  true,
+			expectedErrMsg: "platform.gcp.region: Invalid value: \"us-east4\": invalid region",
+		},
 	}
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -236,6 +260,11 @@ func TestGCPInstallConfigValidation(t *testing.T) {
 	gcpClient.EXPECT().GetProjects(gomock.Any()).Return(map[string]string{"valid-project": "valid-project"}, nil).AnyTimes()
 	// Should get the list of zones.
 	gcpClient.EXPECT().GetZones(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*compute.Zone{{Name: validZone}}, nil).AnyTimes()
+
+	// When passed an invalid project, no regions will be returned
+	gcpClient.EXPECT().GetRegions(gomock.Any(), invalidProjectName).Return(nil, fmt.Errorf("failed to get regions for project")).AnyTimes()
+	// When passed a project that is valid but the region is not contained, an error should still occur
+	gcpClient.EXPECT().GetRegions(gomock.Any(), validProjectName).Return([]string{validRegion}, nil).AnyTimes()
 
 	// Should return the machine type as specified.
 	for key, value := range machineTypeAPIResult {
@@ -329,22 +358,25 @@ func TestGCPEnabledServicesList(t *testing.T) {
 	}{{
 		name:     "No services present",
 		services: nil,
-		err: "following required services are not enabled in this project storage-component.googleapis.com," +
-			" servicemanagement.googleapis.com, storage-api.googleapis.com, compute.googleapis.com," +
-			" cloudapis.googleapis.com, dns.googleapis.com, iam.googleapis.com, iamcredentials.googleapis.com," +
-			" serviceusage.googleapis.com, cloudresourcemanager.googleapis.com",
+		err:      "unable to fetch enabled services for project. Make sure 'serviceusage.googleapis.com' is enabled",
+	}, {
+		name:     "Service Usage missing",
+		services: []string{"compute.googleapis.com"},
+		err:      "unable to fetch enabled services for project. Make sure 'serviceusage.googleapis.com' is enabled",
 	}, {
 		name: "All pre-existing",
-		services: []string{"compute.googleapis.com", "cloudapis.googleapis.com",
+		services: []string{"compute.googleapis.com",
 			"cloudresourcemanager.googleapis.com", "dns.googleapis.com",
 			"iam.googleapis.com", "iamcredentials.googleapis.com",
-			"servicemanagement.googleapis.com", "serviceusage.googleapis.com",
-			"storage-api.googleapis.com", "storage-component.googleapis.com"},
+			"serviceusage.googleapis.com",
+			"deploymentmanager.googleapis.com"},
 	}, {
 		name:     "Some services present",
-		services: []string{"compute.googleapis.com"},
-		err:      "enable all services before creating the cluster",
+		services: []string{"compute.googleapis.com", "serviceusage.googleapis.com"},
+		err:      "the following required services are not enabled in this project: cloudresourcemanager.googleapis.com,dns.googleapis.com,iam.googleapis.com,iamcredentials.googleapis.com",
 	}}
+
+	errForbidden := &googleapi.Error{Code: http.StatusForbidden}
 
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
@@ -352,8 +384,12 @@ func TestGCPEnabledServicesList(t *testing.T) {
 			defer mockCtrl.Finish()
 			gcpClient := mock.NewMockAPI(mockCtrl)
 
-			gcpClient.EXPECT().GetEnabledServices(gomock.Any(), gomock.Any()).Return(test.services, nil).AnyTimes()
-			err := ValidateEnabledServices(nil, gcpClient, "")
+			if !sets.NewString(test.services...).Has("serviceusage.googleapis.com") {
+				gcpClient.EXPECT().GetEnabledServices(gomock.Any(), gomock.Any()).Return(nil, errForbidden).AnyTimes()
+			} else {
+				gcpClient.EXPECT().GetEnabledServices(gomock.Any(), gomock.Any()).Return(test.services, nil).AnyTimes()
+			}
+			err := ValidateEnabledServices(context.TODO(), gcpClient, "")
 			if test.err == "" {
 				assert.NoError(t, err)
 			} else {

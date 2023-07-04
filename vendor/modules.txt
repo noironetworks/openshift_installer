@@ -409,7 +409,7 @@ github.com/IBM/secrets-manager-go-sdk/secretsmanagerv1
 github.com/IBM/vpc-go-sdk/common
 github.com/IBM/vpc-go-sdk/vpcclassicv1
 github.com/IBM/vpc-go-sdk/vpcv1
-# github.com/Masterminds/goutils v1.1.0
+# github.com/Masterminds/goutils v1.1.1 => github.com/Masterminds/goutils v1.1.1
 ## explicit
 github.com/Masterminds/goutils
 # github.com/Masterminds/semver v1.5.0
@@ -1060,7 +1060,7 @@ github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
 github.com/googleapis/gnostic/jsonschema
 github.com/googleapis/gnostic/openapiv2
-# github.com/gophercloud/gophercloud v0.22.0 => github.com/gophercloud/gophercloud v0.17.0
+# github.com/gophercloud/gophercloud v0.22.0 => github.com/gophercloud/gophercloud v0.18.0
 ## explicit; go 1.13
 github.com/gophercloud/gophercloud
 github.com/gophercloud/gophercloud/openstack
@@ -1237,7 +1237,7 @@ github.com/hashicorp/go-checkpoint
 # github.com/hashicorp/go-cleanhttp v0.5.2
 ## explicit; go 1.13
 github.com/hashicorp/go-cleanhttp
-# github.com/hashicorp/go-getter v1.5.2 => github.com/hashicorp/go-getter v1.5.2
+# github.com/hashicorp/go-getter v1.5.2 => github.com/hashicorp/go-getter v1.6.2
 ## explicit; go 1.13
 github.com/hashicorp/go-getter
 github.com/hashicorp/go-getter/helper/url
@@ -2450,7 +2450,7 @@ golang.org/x/oauth2/google/internal/externalaccount
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.0.0-20211029165221-6e7872819dc8
+# golang.org/x/sys v0.0.0-20220517195934-5e4e11fc645e
 ## explicit; go 1.17
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
@@ -3145,7 +3145,7 @@ sigs.k8s.io/yaml
 # cloud.google.com/go => cloud.google.com/go v0.57.0
 # github.com/IBM-Cloud/terraform-provider-ibm => github.com/openshift/terraform-provider-ibm v1.26.2-openshift-2
 # github.com/go-log/log => github.com/go-log/log v0.1.1-0.20181211034820-a514cf01a3eb
-# github.com/gophercloud/gophercloud => github.com/gophercloud/gophercloud v0.17.0
+# github.com/gophercloud/gophercloud => github.com/gophercloud/gophercloud v0.18.0
 # github.com/hashicorp/terraform => github.com/openshift/hashicorp-terraform v0.14.6-openshift-1
 # github.com/hashicorp/terraform-plugin-sdk => github.com/openshift/hashicorp-terraform-plugin-sdk v1.16.0-openshift
 # github.com/hashicorp/terraform-provider-vsphere => github.com/openshift/terraform-provider-vsphere v1.24.3-openshift
@@ -3155,6 +3155,7 @@ sigs.k8s.io/yaml
 # github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20211209144617-7385dd6338e3
 # github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20201009041932-4fe8559913b8
 # github.com/spf13/afero => github.com/spf13/afero v1.2.2
+# github.com/tencentcloud/tencentcloud-sdk-go v3.0.82+incompatible => github.com/tencentcloud/tencentcloud-sdk-go v1.0.191
 # github.com/terraform-providers/terraform-provider-aws => github.com/openshift/terraform-provider-aws v1.60.1-0.20211215220004-24df6d73af46
 # github.com/terraform-providers/terraform-provider-azurerm => github.com/openshift/terraform-provider-azurerm v1.44.1-0.20210224232508-7509319df0f4
 # github.com/terraform-providers/terraform-provider-azurestack => github.com/openshift/terraform-provider-azurestack v0.10.0-openshift
@@ -3176,10 +3177,11 @@ sigs.k8s.io/yaml
 # github.com/go-openapi/errors => github.com/go-openapi/errors v0.19.2
 # github.com/go-openapi/spec => github.com/go-openapi/spec v0.19.4
 # github.com/go-openapi/validate => github.com/go-openapi/validate v0.19.8
-# github.com/hashicorp/go-getter => github.com/hashicorp/go-getter v1.5.2
 # github.com/hashicorp/go-plugin => github.com/hashicorp/go-plugin v1.3.0
 # github.com/hashicorp/terraform-plugin-test/v2 => github.com/hashicorp/terraform-plugin-test/v2 v2.2.0
 # github.com/ulikunitz/xz => github.com/ulikunitz/xz v0.5.7
 # google.golang.org/api => google.golang.org/api v0.33.0
 # google.golang.org/genproto => google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 # google.golang.org/grpc => google.golang.org/grpc v1.35.0
+# github.com/hashicorp/go-getter => github.com/hashicorp/go-getter v1.6.2
+# github.com/Masterminds/goutils => github.com/Masterminds/goutils v1.1.1
