@@ -39,3 +39,7 @@
       os_svc_subnet: "{{ infraID }}-kuryr-service-subnet"
       # Ignition files
       os_bootstrap_ignition: "{{ infraID }}-bootstrap-ignition.json"
+
+  - name: 'Import variables for CiscoACI CNI'
+    include: common_ciscoaci.yaml
+    when: os_networking_type == "CiscoACI"
