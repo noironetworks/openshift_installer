@@ -306,4 +306,3 @@
       - aci_cni.dns_ips is defined and aci_cni.dns_ips | length > 0
       - item not in dns_nameserver_list.stdout
     with_items: "{{ aci_cni.dns_ips }}"
-

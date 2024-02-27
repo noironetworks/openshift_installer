@@ -29,7 +29,7 @@
     with_indexed_items: "{{ [os_port_master] * os_cp_nodes_number }}"
 
   - name: 'Create the ACI containers Control Plane ports'
-    os_port:
+    openstack.cloud.port:
       name: "{{ item.1 }}-{{ item.0 }}"
       network: "{{ os_aci_containers_network }}"
     with_indexed_items: "{{ [os_aci_containers_port_master] * os_cp_nodes_number }}"
@@ -37,7 +37,7 @@
     when: os_networking_type == "CiscoACI"
 
   - name: 'Set ACI containers Control Plane ports tag'
-    command:
+    ansible.builtin.command:
       cmd: "openstack port set --tag {{ cluster_id_tag }} {{ item.1 }}-{{ item.0 }}"
     with_indexed_items: "{{ [os_aci_containers_port_master] * os_cp_nodes_number }}"
     when: os_networking_type == "CiscoACI"
@@ -105,7 +105,7 @@
     when: os_networking_type == "CiscoACI"
 
   - name: 'Create the Control Plane servers'
-    os_server:
+    openstack.cloud.server:
       name: "{{ item.1 }}-{{ item.0 }}"
       image: "{{ os_image_rhcos }}"
       flavor: "{{ os_flavor_master }}"
@@ -120,5 +120,5 @@
     with_indexed_items: "{{ [os_cp_server_name] * os_cp_nodes_number }}"
     when: os_networking_type != "CiscoACI"
 
-- import_playbook: update_machineset.yaml
+- ansible.builtin.import_playbook: update_machineset.yaml
   tags: update_mc
