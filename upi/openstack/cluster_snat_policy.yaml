@@ -7,6 +7,4 @@
       state: present
       kubeconfig: "{{ aci_cni['kubeconfig'] }}"
       definition: "{{ lookup('template', 'cluster_snat_policy.conf.j2') }}"
-      src: cluster_snatpolicy.yaml
-      defintion: "{{ lookup('template', 'cluster_snat_policy.conf.j2') }}"
 

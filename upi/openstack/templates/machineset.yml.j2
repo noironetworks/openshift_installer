@@ -12,8 +12,8 @@ spec:
   selector:
     matchLabels:
       machine.openshift.io/cluster-api-cluster: {{ os_infra_id }}
+      machine.openshift.io/cluster-api-machineset: {{ mcset.stdout }}
   template:
-      machine.openshift.io/cluster-api-machineset: {{ os_infra_id }}-worker-0
     metadata:
       labels:
         machine.openshift.io/cluster-api-cluster: {{ os_infra_id }}
