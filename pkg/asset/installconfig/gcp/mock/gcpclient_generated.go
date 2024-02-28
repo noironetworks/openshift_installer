@@ -10,6 +10,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	google "golang.org/x/oauth2/google"
+	cloudresourcemanager "google.golang.org/api/cloudresourcemanager/v1"
 	compute "google.golang.org/api/compute/v1"
 	dns "google.golang.org/api/dns/v1"
 	sets "k8s.io/apimachinery/pkg/util/sets"
@@ -97,6 +98,21 @@ func (mr *MockAPIMockRecorder) GetEnabledServices(ctx, project interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEnabledServices", reflect.TypeOf((*MockAPI)(nil).GetEnabledServices), ctx, project)
 }
 
+// GetImage mocks base method.
+func (m *MockAPI) GetImage(ctx context.Context, name, project string) (*compute.Image, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetImage", ctx, name, project)
+	ret0, _ := ret[0].(*compute.Image)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetImage indicates an expected call of GetImage.
+func (mr *MockAPIMockRecorder) GetImage(ctx, name, project interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImage", reflect.TypeOf((*MockAPI)(nil).GetImage), ctx, name, project)
+}
+
 // GetMachineType mocks base method.
 func (m *MockAPI) GetMachineType(ctx context.Context, project, zone, machineType string) (*compute.MachineType, error) {
 	m.ctrl.T.Helper()
@@ -125,6 +141,21 @@ func (m *MockAPI) GetNetwork(ctx context.Context, network, project string) (*com
 func (mr *MockAPIMockRecorder) GetNetwork(ctx, network, project interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNetwork", reflect.TypeOf((*MockAPI)(nil).GetNetwork), ctx, network, project)
+}
+
+// GetProjectByID mocks base method.
+func (m *MockAPI) GetProjectByID(ctx context.Context, project string) (*cloudresourcemanager.Project, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProjectByID", ctx, project)
+	ret0, _ := ret[0].(*cloudresourcemanager.Project)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetProjectByID indicates an expected call of GetProjectByID.
+func (mr *MockAPIMockRecorder) GetProjectByID(ctx, project interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProjectByID", reflect.TypeOf((*MockAPI)(nil).GetProjectByID), ctx, project)
 }
 
 // GetProjectPermissions mocks base method.
@@ -200,6 +231,21 @@ func (m *MockAPI) GetRegions(ctx context.Context, project string) ([]string, err
 func (mr *MockAPIMockRecorder) GetRegions(ctx, project interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegions", reflect.TypeOf((*MockAPI)(nil).GetRegions), ctx, project)
+}
+
+// GetServiceAccount mocks base method.
+func (m *MockAPI) GetServiceAccount(ctx context.Context, project, serviceAccount string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetServiceAccount", ctx, project, serviceAccount)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetServiceAccount indicates an expected call of GetServiceAccount.
+func (mr *MockAPIMockRecorder) GetServiceAccount(ctx, project, serviceAccount interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServiceAccount", reflect.TypeOf((*MockAPI)(nil).GetServiceAccount), ctx, project, serviceAccount)
 }
 
 // GetSubnetworks mocks base method.

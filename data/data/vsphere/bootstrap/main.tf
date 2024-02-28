@@ -24,6 +24,7 @@ resource "vsphere_virtual_machine" "vm_bootstrap" {
   wait_for_guest_net_timeout  = "0"
   wait_for_guest_net_routable = "false"
   tags                        = var.tags
+  firmware                    = "efi"
 
   network_interface {
     network_id = var.template[0].network_interfaces.0.network_id
@@ -45,6 +46,7 @@ resource "vsphere_virtual_machine" "vm_bootstrap" {
     "guestinfo.ignition.config.data"          = base64encode(var.ignition_bootstrap)
     "guestinfo.ignition.config.data.encoding" = "base64"
     "guestinfo.hostname"                      = "${var.cluster_id}-bootstrap"
+    "guestinfo.domain"                        = "${var.cluster_domain}"
     "stealclock.enable"                       = "TRUE"
   }
 
