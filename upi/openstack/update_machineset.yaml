@@ -45,22 +45,22 @@
       msg: "{{ node_status }}"
 
   - name: 'Extract Primary Network ID'
-    command:
+    ansible.builtin.command:
       cmd: "openstack network list --name {{ os_network }} -f value -c ID"
     register: nodes_network_uuid
 
   - name: 'Extract Primary Subnet ID'
-    command:
+    ansible.builtin.command:
       cmd: "openstack network list --name {{ os_network }} -f value -c Subnets"
     register: nodes_subnet_uuid
 
   - name: 'Extract Secondary Network ID'
-    command:
+    ansible.builtin.command:
       cmd: "openstack network list --name {{ os_aci_containers_network }} -f value -c ID"
     register: acicontainers_nodes_network_uuid
 
   - name: 'Extract Secondary Subnet ID'
-    command:
+    ansible.builtin.command:
       cmd: "openstack network list --name {{ os_aci_containers_network }} -f value -c Subnets"
     register: acicontainers_nodes_subnet_uuid
 
