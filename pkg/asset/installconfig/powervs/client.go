@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/IBM-Cloud/bluemix-go/crn"
+	"github.com/IBM-Cloud/power-go-client/power/client/datacenters"
+	"github.com/IBM-Cloud/power-go-client/power/client/workspaces"
 	"github.com/IBM/go-sdk-core/v5/core"
 	"github.com/IBM/networking-go-sdk/dnsrecordsv1"
 	"github.com/IBM/networking-go-sdk/dnssvcsv1"
@@ -39,6 +41,9 @@ type API interface {
 	GetVPCs(ctx context.Context, region string) ([]vpcv1.VPC, error)
 	ListResourceGroups(ctx context.Context) (*resourcemanagerv2.ResourceGroupList, error)
 	ListServiceInstances(ctx context.Context) ([]string, error)
+	ServiceInstanceIDToCRN(ctx context.Context, id string) (string, error)
+	GetDatacenterCapabilities(ctx context.Context, zone string) (map[string]bool, error)
+	GetWorkspaceCapabilities(ctx context.Context, svcInsID string) (map[string]bool, error)
 }
 
 // Client makes calls to the PowerVS API.
@@ -658,4 +663,111 @@ func (c *Client) ListServiceInstances(ctx context.Context) ([]string, error) {
 	}
 
 	return serviceInstances, nil
+}
+
+// ServiceInstanceIDToCRN returns the CRN of the matching service instance GUID which was passed in.
+func (c *Client) ServiceInstanceIDToCRN(ctx context.Context, id string) (string, error) {
+	var (
+		options   *resourcecontrollerv2.ListResourceInstancesOptions
+		resources *resourcecontrollerv2.ResourceInstancesList
+		err       error
+		perPage   int64 = 10
+		moreData        = true
+		nextURL   *string
+		groupID   = c.BXCli.PowerVSResourceGroup
+	)
+
+	// If the user passes in a human readable group id, then we need to convert it to a UUID
+	listGroupOptions := c.managementAPI.NewListResourceGroupsOptions()
+	groups, _, err := c.managementAPI.ListResourceGroupsWithContext(ctx, listGroupOptions)
+	if err != nil {
+		return "", fmt.Errorf("failed to list resource groups: %w", err)
+	}
+	for _, group := range groups.Resources {
+		if *group.Name == groupID {
+			groupID = *group.ID
+		}
+	}
+
+	options = c.controllerAPI.NewListResourceInstancesOptions()
+	options.SetResourceGroupID(groupID)
+	// resource ID for Power Systems Virtual Server in the Global catalog
+	options.SetResourceID(powerIAASResourceID)
+	options.SetLimit(perPage)
+
+	for moreData {
+		resources, _, err = c.controllerAPI.ListResourceInstancesWithContext(ctx, options)
+		if err != nil {
+			return "", fmt.Errorf("failed to list resource instances: %w", err)
+		}
+
+		for _, resource := range resources.Resources {
+			var (
+				getResourceOptions *resourcecontrollerv2.GetResourceInstanceOptions
+				resourceInstance   *resourcecontrollerv2.ResourceInstance
+				response           *core.DetailedResponse
+			)
+
+			getResourceOptions = c.controllerAPI.NewGetResourceInstanceOptions(*resource.ID)
+
+			resourceInstance, response, err = c.controllerAPI.GetResourceInstance(getResourceOptions)
+			if err != nil {
+				return "", fmt.Errorf("failed to get instance: %w", err)
+			}
+			if response != nil && response.StatusCode == http.StatusNotFound || response.StatusCode == http.StatusInternalServerError {
+				continue
+			}
+
+			if resourceInstance.Type != nil && *resourceInstance.Type == "service_instance" {
+				if resourceInstance.GUID != nil && *resourceInstance.GUID == id {
+					if resourceInstance.CRN == nil {
+						return "", nil
+					}
+					return *resourceInstance.CRN, nil
+				}
+			}
+		}
+
+		// Based on: https://cloud.ibm.com/apidocs/resource-controller/resource-controller?code=go#list-resource-instances
+		nextURL, err = core.GetQueryParam(resources.NextURL, "start")
+		if err != nil {
+			return "", fmt.Errorf("failed to GetQueryParam on start: %w", err)
+		}
+		if nextURL == nil {
+			options.SetStart("")
+		} else {
+			options.SetStart(*nextURL)
+		}
+
+		moreData = *resources.RowsCount == perPage
+	}
+
+	return "", nil
+}
+
+// GetDatacenterCapabilities retrieves the capabilities of the specified datacenter.
+func (c *Client) GetDatacenterCapabilities(ctx context.Context, zone string) (map[string]bool, error) {
+	var err error
+	if c.BXCli.PISession == nil {
+		err = c.BXCli.NewPISession()
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize PISession in GetDatacenterCapabilities: %w", err)
+		}
+	}
+	params := datacenters.NewV1DatacentersGetParamsWithContext(ctx).WithDatacenterRegion(zone)
+	getOk, err := c.BXCli.PISession.Power.Datacenters.V1DatacentersGet(params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get datacenter capabilities: %w", err)
+	}
+	return getOk.Payload.Capabilities, nil
+}
+
+// GetWorkspaceCapabilities retrieves the capabilities of the specified workspace.
+func (c *Client) GetWorkspaceCapabilities(ctx context.Context, svcInsID string) (map[string]bool, error) {
+	params := workspaces.NewV1WorkspacesGetParamsWithContext(ctx).WithWorkspaceID(svcInsID)
+	getOk, err := c.BXCli.PISession.Power.Workspaces.V1WorkspacesGet(params, c.BXCli.PISession.AuthInfo(svcInsID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get workspace capabilities: %w", err)
+	}
+	return getOk.Payload.Capabilities, nil
 }

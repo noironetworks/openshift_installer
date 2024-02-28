@@ -285,12 +285,12 @@ func byteCompare(ts *testscript.TestScript, neg bool, aData, eData []byte, aFile
 	ts.Logf(aText)
 
 	var sb strings.Builder
-	if err := diff.Text(aFilePath, eFilePath, aText, eText, &sb); err != nil {
+	if err := diff.Text(eFilePath, aFilePath, eText, aText, &sb); err != nil {
 		ts.Check(err)
 	}
 
 	ts.Logf("%s", sb.String())
-	ts.Fatalf("%s and %s differ", aFilePath, eFilePath)
+	ts.Fatalf("%s and %s differ", eFilePath, aFilePath)
 }
 
 func readFileFromISO(isoPath, archiveFile, ignitionFile, nodePath string) ([]byte, error) {
@@ -317,7 +317,7 @@ func readFileFromIgnitionCfg(config *igntypes.Config, nodePath string) ([]byte, 
 }
 
 func extractArchiveFile(isoPath, archive, fileName string) ([]byte, error) {
-	disk, err := diskfs.OpenWithMode(isoPath, diskfs.ReadOnly)
+	disk, err := diskfs.Open(isoPath, diskfs.WithOpenMode(diskfs.ReadOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -414,7 +414,7 @@ func initrdImgContains(ts *testscript.TestScript, neg bool, args []string) {
 }
 
 func checkFileFromInitrdImg(isoPath string, fileName string) error {
-	disk, err := diskfs.OpenWithMode(isoPath, diskfs.ReadOnly)
+	disk, err := diskfs.Open(isoPath, diskfs.WithOpenMode(diskfs.ReadOnly))
 	if err != nil {
 		return err
 	}

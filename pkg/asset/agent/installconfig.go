@@ -8,11 +8,13 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
+	"github.com/openshift/assisted-service/models"
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/baremetal"
 	baremetaldefaults "github.com/openshift/installer/pkg/types/baremetal/defaults"
+	"github.com/openshift/installer/pkg/types/external"
 	"github.com/openshift/installer/pkg/types/none"
 	"github.com/openshift/installer/pkg/types/validation"
 	"github.com/openshift/installer/pkg/types/vsphere"
@@ -95,6 +97,17 @@ func (a *OptionalInstallConfig) validateSupportedPlatforms(installConfig *types.
 	if installConfig.Platform.Name() != "" && !IsSupportedPlatform(HivePlatformType(installConfig.Platform)) {
 		allErrs = append(allErrs, field.NotSupported(fieldPath, installConfig.Platform.Name(), SupportedInstallerPlatforms()))
 	}
+	if installConfig.Platform.Name() == external.Name {
+		if installConfig.Platform.External.PlatformName != string(models.PlatformTypeOci) {
+			fieldPath = field.NewPath("Platform", "External", "PlatformName")
+			allErrs = append(allErrs, field.NotSupported(fieldPath, installConfig.Platform.External.PlatformName, []string{string(models.PlatformTypeOci)}))
+		}
+		if installConfig.Platform.External.PlatformName == string(models.PlatformTypeOci) &&
+			installConfig.Platform.External.CloudControllerManager != external.CloudControllerManagerTypeExternal {
+			fieldPath = field.NewPath("Platform", "External", "CloudControllerManager")
+			allErrs = append(allErrs, field.Invalid(fieldPath, installConfig.Platform.External.CloudControllerManager, fmt.Sprintf("When using external %s platform, %s must be set to %s", string(models.PlatformTypeOci), fieldPath, external.CloudControllerManagerTypeExternal)))
+		}
+	}
 	return allErrs
 }
 
@@ -133,29 +146,21 @@ func (a *OptionalInstallConfig) validateSNOConfiguration(installConfig *types.In
 		workers = workers + int(*worker.Replicas)
 	}
 
-	//  platform None always imply SNO cluster
-	if installConfig.Platform.Name() == none.Name {
-		if installConfig.Networking.NetworkType != "OVNKubernetes" {
-			fieldPath = field.NewPath("Networking", "NetworkType")
-			allErrs = append(allErrs, field.Invalid(fieldPath, installConfig.Networking.NetworkType, "Only OVNKubernetes network type is allowed for Single Node OpenShift (SNO) cluster"))
-		}
-
-		if *installConfig.ControlPlane.Replicas != 1 {
-			fieldPath = field.NewPath("ControlPlane", "Replicas")
-			allErrs = append(allErrs, field.Required(fieldPath, fmt.Sprintf("ControlPlane.Replicas must be 1 for %s platform. Found %v", none.Name, *installConfig.ControlPlane.Replicas)))
-		}
-
-		if workers != 0 {
+	if installConfig.ControlPlane != nil && *installConfig.ControlPlane.Replicas == 1 {
+		if workers == 0 {
+			if (installConfig.Platform.Name() == none.Name || installConfig.Platform.Name() == external.Name) && installConfig.Networking.NetworkType != "OVNKubernetes" {
+				fieldPath = field.NewPath("Networking", "NetworkType")
+				allErrs = append(allErrs, field.Invalid(fieldPath, installConfig.Networking.NetworkType, "Only OVNKubernetes network type is allowed for Single Node OpenShift (SNO) cluster"))
+			}
+			if installConfig.Platform.Name() != none.Name && installConfig.Platform.Name() != external.Name {
+				fieldPath = field.NewPath("Platform")
+				allErrs = append(allErrs, field.Invalid(fieldPath, installConfig.Platform.Name(), fmt.Sprintf("Only platform %s and %s supports 1 ControlPlane and 0 Compute nodes", none.Name, external.Name)))
+			}
+		} else {
 			fieldPath = field.NewPath("Compute", "Replicas")
-			allErrs = append(allErrs, field.Required(fieldPath, fmt.Sprintf("Total number of Compute.Replicas must be 0 for %s platform. Found %v", none.Name, workers)))
+			allErrs = append(allErrs, field.Required(fieldPath, fmt.Sprintf("Total number of Compute.Replicas must be 0 when ControlPlane.Replicas is 1 for platform %s or %s. Found %v", none.Name, external.Name, workers)))
 		}
 	}
-
-	if installConfig.ControlPlane != nil && *installConfig.ControlPlane.Replicas == 1 && workers == 0 && installConfig.Platform.Name() != none.Name {
-		fieldPath = field.NewPath("Platform")
-		allErrs = append(allErrs, field.Invalid(fieldPath, installConfig.Platform.Name(), fmt.Sprintf("Platform should be set to %s if the ControlPlane.Replicas is %d and total number of Compute.Replicas is %d", none.Name, *installConfig.ControlPlane.Replicas, workers)))
-	}
-
 	return allErrs
 }
 
@@ -389,11 +394,6 @@ func warnUnusedConfig(installConfig *types.InstallConfig) {
 	if installConfig.BootstrapInPlace != nil && installConfig.BootstrapInPlace.InstallationDisk != "" {
 		fieldPath := field.NewPath("BootstrapInPlace", "InstallationDisk")
 		logrus.Warnf(fmt.Sprintf("%s: %s is ignored", fieldPath, installConfig.BootstrapInPlace.InstallationDisk))
-	}
-
-	if installConfig.CPUPartitioning != "None" {
-		fieldPath := field.NewPath("CPUPartitioning")
-		logrus.Warnf(fmt.Sprintf("%s: %s is ignored", fieldPath, installConfig.CPUPartitioning))
 	}
 }
 

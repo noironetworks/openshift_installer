@@ -1,7 +1,5 @@
 package openstack
 
-import machinev1alpha1 "github.com/openshift/api/machine/v1alpha1"
-
 // MachinePool stores the configuration for a machine pool installed
 // on OpenStack.
 type MachinePool struct {
@@ -50,7 +48,15 @@ func (o *MachinePool) Set(required *MachinePool) {
 			o.RootVolume = new(RootVolume)
 		}
 		o.RootVolume.Size = required.RootVolume.Size
-		o.RootVolume.Type = required.RootVolume.Type
+		o.RootVolume.DeprecatedType = required.RootVolume.DeprecatedType
+
+		if required.RootVolume.DeprecatedType != "" {
+			o.RootVolume.DeprecatedType = ""
+			o.RootVolume.Types = []string{required.RootVolume.DeprecatedType}
+		} else if len(required.RootVolume.Types) > 0 {
+			o.RootVolume.Types = required.RootVolume.Types
+		}
+
 		if len(required.RootVolume.Zones) > 0 {
 			o.RootVolume.Zones = required.RootVolume.Zones
 		}
@@ -79,8 +85,14 @@ type RootVolume struct {
 	// Required
 	Size int `json:"size"`
 	// Type defines the type of the volume.
-	// Required
-	Type string `json:"type"`
+	// Deprecated: Use Types instead.
+	// +optional
+	DeprecatedType string `json:"type,omitempty"`
+
+	// Types is the list of the volume types of the root volumes.
+	// This is mutually exclusive with Type.
+	// +required
+	Types []string `json:"types"`
 
 	// Zones is the list of availability zones where the root volumes should be deployed.
 	// If no zones are provided, all instances will be deployed on OpenStack Cinder default availability zone
@@ -90,21 +102,26 @@ type RootVolume struct {
 
 // PortTarget defines, directly or indirectly, one or more subnets where to attach a port.
 type PortTarget struct {
-	// Network is a query for an openstack network that the port will be created or discovered on.
+	// Network is a query for an openstack network that the port will be discovered on.
 	// This will fail if the query returns more than one network.
 	Network NetworkFilter `json:"network,omitempty"`
-	// Specify pairs of subnet and/or IP address. These should be subnets of the network with the given NetworkID.
-	FixedIPs []FixedIP `json:"fixedIPs,omitempty"`
+	// Specify subnets of the network where control plane port will be discovered.
+	FixedIPs []FixedIP `json:"fixedIPs"`
 }
 
-// NetworkFilter defines a network either by name or by ID.
+// NetworkFilter defines a network by name and/or ID.
 type NetworkFilter struct {
 	Name string `json:"name,omitempty"`
 	ID   string `json:"id,omitempty"`
 }
 
-// FixedIP defines a subnet.
+// FixedIP identifies a subnet defined by a subnet filter.
 type FixedIP struct {
-	// subnetID specifies the ID of the subnet where the fixed IP will be allocated.
-	Subnet machinev1alpha1.SubnetFilter `json:"subnet"`
+	Subnet SubnetFilter `json:"subnet"`
+}
+
+// SubnetFilter defines a subnet by ID and/or name.
+type SubnetFilter struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
 }

@@ -37,10 +37,21 @@ module "master" {
   os_volume_type             = var.azure_master_root_volume_type
   os_volume_size             = var.azure_master_root_volume_size
   private                    = var.azure_private
-  outbound_udr               = var.azure_outbound_user_defined_routing
+  outbound_type              = var.azure_outbound_routing_type
   ultra_ssd_enabled          = var.azure_control_plane_ultra_ssd_enabled
   vm_networking_type         = var.azure_control_plane_vm_networking_type
   azure_extra_tags           = var.azure_extra_tags
+  use_marketplace_image      = var.azure_use_marketplace_image
+  vm_image_has_plan          = var.azure_marketplace_image_has_plan
+  vm_image_publisher         = var.azure_marketplace_image_publisher
+  vm_image_offer             = var.azure_marketplace_image_offer
+  vm_image_sku               = var.azure_marketplace_image_sku
+  vm_image_version           = var.azure_marketplace_image_version
+
+  security_encryption_type            = var.azure_master_security_encryption_type
+  secure_vm_disk_encryption_set_id    = var.azure_master_secure_vm_disk_encryption_set_id
+  secure_boot                         = var.azure_master_secure_boot
+  virtualized_trusted_platform_module = var.azure_master_virtualized_trusted_platform_module
 
   use_ipv4 = var.use_ipv4
   use_ipv6 = var.use_ipv6

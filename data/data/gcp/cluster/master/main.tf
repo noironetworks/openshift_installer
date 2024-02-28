@@ -37,13 +37,6 @@ resource "google_project_iam_member" "master-storage-admin" {
   member  = "serviceAccount:${google_service_account.master-node-sa[0].email}"
 }
 
-resource "google_project_iam_member" "master-service-account-user" {
-  count   = var.service_account == "" ? 1 : 0
-  project = var.project_id
-  role    = "roles/iam.serviceAccountUser"
-  member  = "serviceAccount:${google_service_account.master-node-sa[0].email}"
-}
-
 resource "google_compute_instance" "master" {
   count       = var.instance_count
   description = local.description
@@ -54,9 +47,10 @@ resource "google_compute_instance" "master" {
 
   boot_disk {
     initialize_params {
-      type  = var.root_volume_type
-      size  = var.root_volume_size
-      image = var.image
+      type   = var.root_volume_type
+      size   = var.root_volume_size
+      image  = var.image
+      labels = var.gcp_extra_labels
     }
     kms_key_self_link = var.root_volume_kms_key_link
   }
@@ -96,7 +90,7 @@ resource "google_compute_instance" "master" {
     var.tags,
   )
 
-  labels = var.labels
+  labels = var.gcp_extra_labels
 
   service_account {
     email  = var.service_account != "" ? var.service_account : google_service_account.master-node-sa[0].email

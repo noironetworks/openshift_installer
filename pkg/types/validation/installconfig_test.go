@@ -579,7 +579,7 @@ func TestValidateInstallConfig(t *testing.T) {
 				c.Platform = types.Platform{}
 				return c
 			}(),
-			expectedError: `^platform: Invalid value: "": must specify one of the platforms \(alibabacloud, aws, azure, baremetal, gcp, ibmcloud, none, nutanix, openstack, powervs, vsphere\)$`,
+			expectedError: `^platform: Invalid value: "": must specify one of the platforms \(alibabacloud, aws, azure, baremetal, external, gcp, ibmcloud, none, nutanix, openstack, powervs, vsphere\)$`,
 		},
 		{
 			name: "multiple platforms",
@@ -610,7 +610,7 @@ func TestValidateInstallConfig(t *testing.T) {
 				}
 				return c
 			}(),
-			expectedError: `^platform: Invalid value: "libvirt": must specify one of the platforms \(alibabacloud, aws, azure, baremetal, gcp, ibmcloud, none, nutanix, openstack, powervs, vsphere\)$`,
+			expectedError: `^platform: Invalid value: "libvirt": must specify one of the platforms \(alibabacloud, aws, azure, baremetal, external, gcp, ibmcloud, none, nutanix, openstack, powervs, vsphere\)$`,
 		},
 		{
 			name: "invalid libvirt platform",
@@ -622,7 +622,7 @@ func TestValidateInstallConfig(t *testing.T) {
 				c.Platform.Libvirt.URI = ""
 				return c
 			}(),
-			expectedError: `^\[platform: Invalid value: "libvirt": must specify one of the platforms \(alibabacloud, aws, azure, baremetal, gcp, ibmcloud, none, nutanix, openstack, powervs, vsphere\), platform\.libvirt\.uri: Invalid value: "": invalid URI "" \(no scheme\)]$`,
+			expectedError: `^\[platform: Invalid value: "libvirt": must specify one of the platforms \(alibabacloud, aws, azure, baremetal, external, gcp, ibmcloud, none, nutanix, openstack, powervs, vsphere\), platform\.libvirt\.uri: Invalid value: "": invalid URI "" \(no scheme\)]$`,
 		},
 		{
 			name: "valid none platform",
@@ -2087,18 +2087,6 @@ func TestValidateInstallConfig(t *testing.T) {
 			expectedError: "platform.vsphere.apiVIPs: Required value: must specify VIP for API, when VIP for ingress is set",
 		},
 		{
-			name: "platform.aws.hostedZoneRole should return error without TechPreviewNoUpgrade",
-			installConfig: func() *types.InstallConfig {
-				c := validInstallConfig()
-				c.Platform = types.Platform{
-					AWS: validAWSPlatform(),
-				}
-				c.Platform.AWS.HostedZoneRole = "test-zone"
-				return c
-			}(),
-			expectedError: `platform.aws.hostedZoneRole: Forbidden: the TechPreviewNoUpgrade feature set must be enabled to use this field`,
-		},
-		{
 			name: "valid custom features",
 			installConfig: func() *types.InstallConfig {
 				c := validInstallConfig()
@@ -2148,6 +2136,50 @@ func TestValidateInstallConfig(t *testing.T) {
 				return c
 			}(),
 			expectedError: "featureGates: Forbidden: featureGates can only be used with the CustomNoUpgrade feature set",
+		},
+		{
+			name: "return error when MAPI disabled w/o baremetal with baseline none",
+			installConfig: func() *types.InstallConfig {
+				c := validInstallConfig()
+				c.Capabilities = &types.Capabilities{
+					BaselineCapabilitySet:         configv1.ClusterVersionCapabilitySetNone,
+					AdditionalEnabledCapabilities: []configv1.ClusterVersionCapability{configv1.ClusterVersionCapabilityBaremetal},
+				}
+				return c
+			}(),
+			expectedError: `the baremetal capability requires the MachineAPI capability`,
+		},
+		{
+			name: "valid disabled MAPI capability configuration",
+			installConfig: func() *types.InstallConfig {
+				c := validInstallConfig()
+				c.Capabilities = &types.Capabilities{
+					BaselineCapabilitySet: configv1.ClusterVersionCapabilitySetNone,
+				}
+				return c
+			}(),
+		},
+		{
+			name: "valid enabled MAPI capability configuration",
+			installConfig: func() *types.InstallConfig {
+				c := validInstallConfig()
+				c.Capabilities = &types.Capabilities{
+					BaselineCapabilitySet:         configv1.ClusterVersionCapabilitySetNone,
+					AdditionalEnabledCapabilities: []configv1.ClusterVersionCapability{configv1.ClusterVersionCapabilityBaremetal, configv1.ClusterVersionCapabilityMachineAPI},
+				}
+				return c
+			}(),
+		},
+		{
+			name: "valid enabled MAPI capability configuration 2",
+			installConfig: func() *types.InstallConfig {
+				c := validInstallConfig()
+				c.Capabilities = &types.Capabilities{
+					BaselineCapabilitySet:         configv1.ClusterVersionCapabilitySetNone,
+					AdditionalEnabledCapabilities: []configv1.ClusterVersionCapability{configv1.ClusterVersionCapabilityMachineAPI},
+				}
+				return c
+			}(),
 		},
 	}
 	for _, tc := range cases {

@@ -35,15 +35,16 @@ module "pi_network" {
   }
   source = "./power_network"
 
-  cluster_id        = var.cluster_id
-  cloud_instance_id = var.powervs_cloud_instance_id
-  resource_group    = var.powervs_resource_group
-  pvs_network_name  = var.powervs_network_name
-  machine_cidr      = var.machine_v4_cidrs[0]
-  cloud_conn_name   = var.powervs_ccon_name
-  vpc_crn           = module.vpc.vpc_crn
-  dns_server        = module.dns.dns_server
-  enable_snat       = var.powervs_enable_snat
+  cluster_id              = var.cluster_id
+  cloud_instance_id       = var.powervs_cloud_instance_id
+  resource_group          = var.powervs_resource_group
+  pvs_network_name        = var.powervs_network_name
+  machine_cidr            = var.machine_v4_cidrs[0]
+  cloud_conn_name         = var.powervs_ccon_name
+  vpc_crn                 = module.vpc.vpc_crn
+  dns_server              = module.dns.dns_server
+  enable_snat             = var.powervs_enable_snat
+  transit_gateway_enabled = var.powervs_transit_gateway_enabled
 }
 
 resource "ibm_pi_key" "cluster_key" {
@@ -73,7 +74,7 @@ module "master" {
   ignition            = var.ignition_master
   sys_type            = var.powervs_sys_type
   proc_type           = var.powervs_proc_type
-  ssh_key_id          = ibm_pi_key.cluster_key.key_id
+  ssh_key_name        = ibm_pi_key.cluster_key.name
   image_id            = ibm_pi_image.boot_image.image_id
   dhcp_network_id     = module.pi_network.dhcp_network_id
   dhcp_id             = module.pi_network.dhcp_id
@@ -141,4 +142,18 @@ module "dns" {
   publish_strategy           = var.powervs_publish_strategy
   enable_snat                = var.powervs_enable_snat
   # dns_vm_image_name        = @FUTURE
+}
+
+module "transit_gateway" {
+  providers = {
+    ibm = ibm.vpc
+  }
+  source = "./transit_gateway"
+
+  cluster_id              = var.cluster_id
+  resource_group          = var.powervs_resource_group
+  service_instance_crn    = var.powervs_service_instance_crn
+  transit_gateway_enabled = var.powervs_transit_gateway_enabled
+  vpc_crn                 = module.vpc.vpc_crn
+  vpc_region              = var.powervs_vpc_region
 }

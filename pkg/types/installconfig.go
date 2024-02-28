@@ -12,6 +12,7 @@ import (
 	"github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
 	"github.com/openshift/installer/pkg/types/baremetal"
+	"github.com/openshift/installer/pkg/types/external"
 	"github.com/openshift/installer/pkg/types/gcp"
 	"github.com/openshift/installer/pkg/types/ibmcloud"
 	"github.com/openshift/installer/pkg/types/libvirt"
@@ -50,6 +51,7 @@ var (
 	// to the user in the interactive wizard.
 	HiddenPlatformNames = []string{
 		baremetal.Name,
+		external.Name,
 		none.Name,
 	}
 
@@ -162,7 +164,6 @@ type InstallConfig struct {
 	// When this field is set the cluster will be flagged for CPU Partitioning allowing users to segregate workloads to
 	// specific CPU Sets. This does not make any decisions on workloads it only configures the nodes to allow CPU Partitioning.
 	// The "AllNodes" value will setup all nodes for CPU Partitioning, the default is "None".
-	// This feature is currently in TechPreview.
 	//
 	// +kubebuilder:default="None"
 	// +optional
@@ -286,6 +287,10 @@ type Platform struct {
 	// platform.
 	None *none.Platform `json:"none,omitempty"`
 
+	// External is the configuration used when installing on
+	// an external cloud provider.
+	External *external.Platform `json:"external,omitempty"`
+
 	// OpenStack is the configuration used when installing on OpenStack.
 	// +optional
 	OpenStack *openstack.Platform `json:"openstack,omitempty"`
@@ -330,6 +335,8 @@ func (p *Platform) Name() string {
 		return libvirt.Name
 	case p.None != nil:
 		return none.Name
+	case p.External != nil:
+		return external.Name
 	case p.OpenStack != nil:
 		return openstack.Name
 	case p.VSphere != nil:

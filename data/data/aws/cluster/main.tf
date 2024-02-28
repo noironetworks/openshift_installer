@@ -5,7 +5,15 @@ locals {
     },
     var.aws_extra_tags,
   )
-  description = "Created By OpenShift Installer"
+  description    = "Created By OpenShift Installer"
+  new_tag_len    = 8
+  sliced_tag_map = length(var.aws_extra_tags) <= local.new_tag_len ? var.aws_extra_tags : { for k in slice(keys(var.aws_extra_tags), 0, local.new_tag_len) : k => var.aws_extra_tags[k] }
+  s3_object_tags = merge(
+    {
+      "kubernetes.io/cluster/${var.cluster_id}" = "owned"
+    },
+    local.sliced_tag_map,
+  )
 }
 
 provider "aws" {
@@ -34,7 +42,7 @@ module "masters" {
   availability_zones               = var.aws_master_availability_zones
   az_to_subnet_id                  = module.vpc.az_to_private_subnet_id
   instance_count                   = var.master_count
-  master_sg_ids                    = [module.vpc.master_sg_id]
+  master_sg_ids                    = concat([module.vpc.master_sg_id], var.aws_master_security_groups)
   root_volume_iops                 = var.aws_master_root_volume_iops
   root_volume_size                 = var.aws_master_root_volume_size
   root_volume_type                 = var.aws_master_root_volume_type
@@ -88,12 +96,17 @@ module "vpc" {
   private_subnets  = var.aws_private_subnets
   publish_strategy = var.aws_publish_strategy
 
-  availability_zones = distinct(
-    concat(
-      var.aws_master_availability_zones,
-      var.aws_worker_availability_zones,
-    ),
+  availability_zones = sort(
+    distinct(
+      concat(
+        var.aws_master_availability_zones,
+        var.aws_worker_availability_zones,
+      ),
+    )
   )
+
+  edge_zones         = distinct(var.aws_edge_local_zones)
+  edge_parent_gw_map = var.aws_edge_parent_zones_index
 
   tags = local.tags
 }
@@ -116,3 +129,38 @@ resource "aws_ami_copy" "imported" {
   )
 }
 
+resource "aws_s3_bucket" "ignition" {
+  count  = var.aws_preserve_bootstrap_ignition ? 1 : 0
+  bucket = var.aws_ignition_bucket
+
+  tags = merge(
+    {
+      "Name" = "${var.cluster_id}-bootstrap"
+    },
+    local.tags,
+  )
+
+  lifecycle {
+    ignore_changes = all
+  }
+}
+
+resource "aws_s3_object" "ignition" {
+  count  = var.aws_preserve_bootstrap_ignition ? 1 : 0
+  bucket = aws_s3_bucket.ignition[0].id
+  key    = "bootstrap.ign"
+  source = var.ignition_bootstrap_file
+
+  server_side_encryption = "AES256"
+
+  tags = merge(
+    {
+      "Name" = "${var.cluster_id}-bootstrap"
+    },
+    local.s3_object_tags,
+  )
+
+  lifecycle {
+    ignore_changes = all
+  }
+}

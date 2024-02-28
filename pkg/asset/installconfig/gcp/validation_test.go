@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+	logrusTest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	googleoauth "golang.org/x/oauth2/google"
 	"google.golang.org/api/cloudresourcemanager/v1"
@@ -17,6 +18,7 @@ import (
 	"google.golang.org/api/googleapi"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/openshift/installer/pkg/asset/installconfig/gcp/mock"
 	"github.com/openshift/installer/pkg/ipnet"
@@ -41,6 +43,8 @@ var (
 	validPublicZone    = "valid-short-public-zone"
 	invalidPublicZone  = "invalid-short-public-zone"
 	validBaseDomain    = "example.installer.domain."
+	validXpnSA         = "valid-example-sa@gcloud.serviceaccount.com"
+	invalidXpnSA       = "invalid-example-sa@gcloud.serviceaccount.com"
 
 	validPrivateDNSZone = dns.ManagedZone{
 		Name:    validPrivateZone,
@@ -89,11 +93,17 @@ var (
 	removeVPC                = func(ic *types.InstallConfig) { ic.GCP.Network = "" }
 	removeSubnets            = func(ic *types.InstallConfig) { ic.GCP.ComputeSubnet, ic.GCP.ControlPlaneSubnet = "", "" }
 	invalidClusterName       = func(ic *types.InstallConfig) { ic.ObjectMeta.Name = "testgoogletest" }
+	validNetworkProject      = func(ic *types.InstallConfig) { ic.GCP.NetworkProjectID = validProjectName }
+	validateXpnSA            = func(ic *types.InstallConfig) { ic.ControlPlane.Platform.GCP.ServiceAccount = validXpnSA }
+	invalidateXpnSA          = func(ic *types.InstallConfig) { ic.ControlPlane.Platform.GCP.ServiceAccount = invalidXpnSA }
 
 	machineTypeAPIResult = map[string]*compute.MachineType{
 		"n1-standard-1": {GuestCpus: 1, MemoryMb: 3840},
 		"n1-standard-2": {GuestCpus: 2, MemoryMb: 7680},
 		"n1-standard-4": {GuestCpus: 4, MemoryMb: 15360},
+		"n2-standard-1": {GuestCpus: 1, MemoryMb: 8192},
+		"n2-standard-2": {GuestCpus: 2, MemoryMb: 16384},
+		"n2-standard-4": {GuestCpus: 4, MemoryMb: 32768},
 	}
 
 	subnetAPIResult = []*compute.Subnetwork{
@@ -130,11 +140,13 @@ func validInstallConfig() *types.InstallConfig {
 			},
 		},
 		ControlPlane: &types.MachinePool{
+			Architecture: types.ArchitectureAMD64,
 			Platform: types.MachinePoolPlatform{
 				GCP: &gcp.MachinePool{},
 			},
 		},
 		Compute: []types.MachinePool{{
+			Architecture: types.ArchitectureAMD64,
 			Platform: types.MachinePoolPlatform{
 				GCP: &gcp.MachinePool{},
 			},
@@ -207,7 +219,7 @@ func TestGCPInstallConfigValidation(t *testing.T) {
 			name:           "Invalid default machine type",
 			edits:          editFunctions{invalidateDefaultMachineTypes},
 			expectedError:  true,
-			expectedErrMsg: `\[platform.gcp.defaultMachinePlatform.type: Invalid value: "n1-standard-1": instance type does not meet minimum resource requirements of 4 vCPUs, platform.gcp.defaultMachinePlatform.type: Invalid value: "n1-standard-1": instance type does not meet minimum resource requirements of 15360 MB Memory\]`,
+			expectedErrMsg: `\[platform.gcp.defaultMachinePlatform.type: Invalid value: "n1-standard-1": instance type does not meet minimum resource requirements of 4 vCPUs, platform.gcp.defaultMachinePlatform.type: Invalid value: "n1-standard-1": instance type does not meet minimum resource requirements of 15360 MB Memory, controlPlane.platform.gcp.type: Invalid value: "n1-standard-1": instance type does not meet minimum resource requirements of 4 vCPUs, controlPlane.platform.gcp.type: Invalid value: "n1-standard-1": instance type does not meet minimum resource requirements of 15360 MB Memory, compute\[0\].platform.gcp.type: Invalid value: "n1-standard-1": instance type does not meet minimum resource requirements of 2 vCPUs, compute\[0\].platform.gcp.type: Invalid value: "n1-standard-1": instance type does not meet minimum resource requirements of 7680 MB Memory\]`,
 		},
 		{
 			name:           "Invalid control plane machine types",
@@ -275,6 +287,17 @@ func TestGCPInstallConfigValidation(t *testing.T) {
 			expectedError:  true,
 			expectedErrMsg: "platform.gcp.region: Invalid value: \"us-east4\": invalid region",
 		},
+		{
+			name:          "Valid XPN Service Account",
+			edits:         editFunctions{validNetworkProject, validateXpnSA},
+			expectedError: false,
+		},
+		{
+			name:           "Invalid XPN Service Account",
+			edits:          editFunctions{validNetworkProject, invalidateXpnSA},
+			expectedError:  true,
+			expectedErrMsg: "controlPlane.platform.gcp.serviceAccount: Internal error\"",
+		},
 	}
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -299,10 +322,10 @@ func TestGCPInstallConfigValidation(t *testing.T) {
 
 	// Should return the machine type as specified.
 	for key, value := range machineTypeAPIResult {
-		gcpClient.EXPECT().GetMachineType(gomock.Any(), gomock.Any(), gomock.Any(), key).Return(value, nil).AnyTimes()
+		gcpClient.EXPECT().GetMachineTypeWithZones(gomock.Any(), gomock.Any(), gomock.Any(), key).Return(value, sets.New(validZone), nil).AnyTimes()
 	}
 	// When passed incorrect machine type, the API returns nil.
-	gcpClient.EXPECT().GetMachineType(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("404")).AnyTimes()
+	gcpClient.EXPECT().GetMachineTypeWithZones(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil, fmt.Errorf("404")).AnyTimes()
 
 	// When passed the correct network & project, return an empty network, which should be enough to validate ok.
 	gcpClient.EXPECT().GetNetwork(gomock.Any(), validNetworkName, validProjectName).Return(&compute.Network{}, nil).AnyTimes()
@@ -327,6 +350,9 @@ func TestGCPInstallConfigValidation(t *testing.T) {
 	gcpClient.EXPECT().GetDNSZoneByName(gomock.Any(), gomock.Any(), validPublicZone).Return(&validPublicDNSZone, nil).AnyTimes()
 	gcpClient.EXPECT().GetDNSZoneByName(gomock.Any(), gomock.Any(), validPrivateZone).Return(&validPrivateDNSZone, nil).AnyTimes()
 	gcpClient.EXPECT().GetDNSZoneByName(gomock.Any(), gomock.Any(), invalidPublicZone).Return(nil, fmt.Errorf("no matching DNS Zone found")).AnyTimes()
+
+	gcpClient.EXPECT().GetServiceAccount(gomock.Any(), validProjectName, validXpnSA).Return(validXpnSA, nil).AnyTimes()
+	gcpClient.EXPECT().GetServiceAccount(gomock.Any(), validProjectName, invalidXpnSA).Return("", fmt.Errorf("controlPlane.platform.gcp.serviceAccount: Internal error\"")).AnyTimes()
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -521,7 +547,6 @@ func TestValidateCredentialMode(t *testing.T) {
 
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
-
 			ic := types.InstallConfig{
 				ObjectMeta:      metav1.ObjectMeta{Name: "cluster-name"},
 				BaseDomain:      "base-domain",
@@ -540,6 +565,459 @@ func TestValidateCredentialMode(t *testing.T) {
 				assert.NoError(t, err)
 			} else {
 				assert.Regexp(t, test.err, err)
+			}
+		})
+	}
+}
+
+func TestValidateServiceAccountPresent(t *testing.T) {
+	cases := []struct {
+		name             string
+		creds            *googleoauth.Credentials
+		serviceAccount   string
+		networkProjectID string
+		expectedError    string
+	}{
+		{
+			name:  "Test no network project ID",
+			creds: &googleoauth.Credentials{},
+		},
+		{
+			name:             "Test network project ID with service account",
+			creds:            &googleoauth.Credentials{},
+			serviceAccount:   "test-service-account",
+			networkProjectID: "test-network-project",
+		},
+		{
+			name:             "Test network project ID service account and creds",
+			creds:            &googleoauth.Credentials{JSON: []byte("{}")},
+			serviceAccount:   "test-service-account",
+			networkProjectID: "test-network-project",
+		},
+		{
+			name:             "Test network project ID no creds",
+			creds:            &googleoauth.Credentials{JSON: nil},
+			networkProjectID: "test-network-project",
+			expectedError:    "controlPlane.platform.gcp.serviceAccount: Required value: service account must be provided when authentication credentials do not provide a service account",
+		},
+	}
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	for _, test := range cases {
+		gcpClient := mock.NewMockAPI(mockCtrl)
+		if test.networkProjectID != "" {
+			gcpClient.EXPECT().GetCredentials().Return(test.creds)
+		}
+
+		t.Run(test.name, func(t *testing.T) {
+			ic := types.InstallConfig{
+				ObjectMeta:      metav1.ObjectMeta{Name: "cluster-name"},
+				BaseDomain:      "base-domain",
+				Platform:        types.Platform{GCP: &gcp.Platform{ProjectID: "project-id", NetworkProjectID: test.networkProjectID}},
+				CredentialsMode: types.PassthroughCredentialsMode,
+				ControlPlane: &types.MachinePool{
+					Platform: types.MachinePoolPlatform{
+						GCP: &gcp.MachinePool{
+							ServiceAccount: test.serviceAccount,
+						},
+					},
+				},
+			}
+
+			errorList := validateServiceAccountPresent(gcpClient, &ic)
+			if errorList == nil && test.expectedError == "" {
+				assert.NoError(t, errorList.ToAggregate())
+			} else {
+				assert.Regexp(t, test.expectedError, errorList.ToAggregate())
+			}
+		})
+	}
+}
+
+func TestValidateZones(t *testing.T) {
+	validZonesDefaultMachine := func(ic *types.InstallConfig) {
+		ic.Platform.GCP.DefaultMachinePlatform.Zones = []string{"us-central1-a", "us-central1-c"}
+	}
+	validZonesControlPlane := func(ic *types.InstallConfig) {
+		ic.ControlPlane.Platform.GCP.Zones = []string{"us-central1-a", "us-central1-b"}
+	}
+	validZonesCompute := func(ic *types.InstallConfig) {
+		ic.Compute[0].Platform.GCP.Zones = []string{"us-central1-b", "us-central1-c", "us-central1-d"}
+	}
+	invalidZonesDefaultMachine := func(ic *types.InstallConfig) {
+		ic.Platform.GCP.DefaultMachinePlatform.Zones = []string{"us-central1-a", "us-central1-x", "us-central1-y"}
+	}
+	invalidZonesControlPlane := func(ic *types.InstallConfig) {
+		ic.ControlPlane.Platform.GCP.Zones = []string{"us-central1-d", "us-central1-x", "us-central1-y"}
+	}
+	invalidZonesCompute := func(ic *types.InstallConfig) {
+		ic.Compute[0].Platform.GCP.Zones = []string{"us-central1-y", "us-central1-z", "us-central1-w"}
+	}
+
+	cases := []struct {
+		name           string
+		edits          editFunctions
+		expectedError  bool
+		expectedErrMsg string
+	}{
+		{
+			name:           "Valid zones for defaultMachine",
+			edits:          editFunctions{validZonesDefaultMachine},
+			expectedError:  false,
+			expectedErrMsg: "",
+		},
+		{
+			name:           "Invalid zones for defaultMachine",
+			edits:          editFunctions{invalidZonesDefaultMachine},
+			expectedError:  true,
+			expectedErrMsg: `^\[platform.gcp.defaultMachinePlatform.zones: Invalid value: \[\]string\{"us\-central1\-x", "us\-central1\-y"\}: zone\(s\) not found in region\]$`,
+		},
+		{
+			name:           "Valid zones for controlPlane",
+			edits:          editFunctions{validZonesControlPlane},
+			expectedError:  false,
+			expectedErrMsg: "",
+		},
+		{
+			name:           "Invalid zones for controlPlane",
+			edits:          editFunctions{invalidZonesControlPlane},
+			expectedError:  true,
+			expectedErrMsg: `^\[controlPlane.platform.gcp.zones: Invalid value: \[\]string\{"us\-central1\-x", "us\-central1\-y"\}: zone\(s\) not found in region\]$`,
+		},
+		{
+			name:           "Valid zones for compute",
+			edits:          editFunctions{validZonesCompute},
+			expectedError:  false,
+			expectedErrMsg: "",
+		},
+		{
+			name:           "Invalid zones for compute",
+			edits:          editFunctions{invalidZonesCompute},
+			expectedError:  true,
+			expectedErrMsg: `^\[compute\[0\].platform.gcp.zones: Invalid value: \[\]string\{"us\-central1\-w", "us\-central1\-y", "us\-central1\-z"\}: zone\(s\) not found in region\]$`,
+		},
+	}
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	gcpClient := mock.NewMockAPI(mockCtrl)
+
+	validZones := []*compute.Zone{
+		{Name: "us-central1-a"},
+		{Name: "us-central1-b"},
+		{Name: "us-central1-c"},
+		{Name: "us-central1-d"},
+	}
+
+	// Should get the list of zones.
+	gcpClient.EXPECT().GetZones(gomock.Any(), gomock.Any(), gomock.Any()).Return(validZones, nil).AnyTimes()
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			editedInstallConfig := validInstallConfig()
+			for _, edit := range tc.edits {
+				edit(editedInstallConfig)
+			}
+
+			errs := validateZones(gcpClient, editedInstallConfig)
+			if tc.expectedError {
+				assert.Regexp(t, tc.expectedErrMsg, errs)
+			} else {
+				assert.Empty(t, errs)
+			}
+		})
+	}
+}
+
+func TestValidateInstanceType(t *testing.T) {
+	cases := []struct {
+		name           string
+		zones          []string
+		instanceType   string
+		expectedError  bool
+		expectedErrMsg string
+	}{
+		{
+			name:           "Valid instance type with min requirements and no zones specified",
+			zones:          []string{},
+			instanceType:   "n1-standard-4",
+			expectedError:  false,
+			expectedErrMsg: "",
+		},
+		{
+			name:           "Valid instance type with min requirements and valid zones specified",
+			zones:          []string{"a", "b"},
+			instanceType:   "n1-standard-4",
+			expectedError:  false,
+			expectedErrMsg: "",
+		},
+		{
+			name:           "Valid instance type with min requirements and invalid zones specified",
+			zones:          []string{"a", "b", "d", "x", "y"},
+			instanceType:   "n1-standard-4",
+			expectedError:  true,
+			expectedErrMsg: `\[instance.type: Invalid value: "n1\-standard\-4": instance type not available in zones: \[x y\]\]$`,
+		},
+		{
+			name:           "Valid instance fails min requirements and no zones specified",
+			zones:          []string{},
+			instanceType:   "n1-standard-2",
+			expectedError:  true,
+			expectedErrMsg: `^\[instance.type: Invalid value: "n1\-standard\-2": instance type does not meet minimum resource requirements of 4 vCPUs instance.type: Invalid value: "n1\-standard\-2": instance type does not meet minimum resource requirements of 15360 MB Memory\]$`,
+		},
+		{
+			name:           "Valid instance fails min requirements and valid zones specified",
+			zones:          []string{"a", "b"},
+			instanceType:   "n1-standard-1",
+			expectedError:  true,
+			expectedErrMsg: ``,
+		},
+		{
+			name:           "Valid instance fails min requirements and invalid zones specified",
+			zones:          []string{"a", "x", "y"},
+			expectedError:  true,
+			expectedErrMsg: ``,
+		},
+		{
+			name:           "Invalid instance and no zones specified",
+			zones:          []string{},
+			instanceType:   "invalid-instance-1",
+			expectedError:  true,
+			expectedErrMsg: `^\[<nil>: Internal error: 404\]$`,
+		},
+		{
+			name:           "Invalid instance and valid zones specified",
+			zones:          []string{"a", "b"},
+			instanceType:   "invalid-instance-1",
+			expectedError:  true,
+			expectedErrMsg: `^\[<nil>: Internal error: 404\]$`,
+		},
+		{
+			name:           "Invalid instance and invalid zones specified",
+			zones:          []string{"a", "x", "y", "z"},
+			instanceType:   "invalid-instance-1",
+			expectedError:  true,
+			expectedErrMsg: `^\[<nil>: Internal error: 404\]$`,
+		},
+	}
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+	gcpClient := mock.NewMockAPI(mockCtrl)
+
+	// Should return the machine type as specified
+	for key, value := range machineTypeAPIResult {
+		gcpClient.EXPECT().GetMachineTypeWithZones(gomock.Any(), gomock.Any(), gomock.Any(), key).Return(value, sets.New("a", "b", "c", "d"), nil).AnyTimes()
+	}
+	// When passed incorrect machine type, the API returns nil.
+	gcpClient.EXPECT().GetMachineTypeWithZones(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil, fmt.Errorf("404")).AnyTimes()
+
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			errs := ValidateInstanceType(gcpClient, field.NewPath("instance"), "project-id", "region", test.zones, test.instanceType, controlPlaneReq)
+			if test.expectedError {
+				assert.Regexp(t, test.expectedErrMsg, errs)
+			} else {
+				assert.Empty(t, errs)
+			}
+		})
+	}
+}
+
+func TestValidateMarketplaceImages(t *testing.T) {
+	var (
+		validImage     = "valid-image"
+		projectID      = "project-id"
+		invalidImage   = "invalid-image"
+		mismatchedArch = "mismatched-arch"
+		osImage        = &gcp.OSImage{}
+
+		validDefaultMachineImage = func(ic *types.InstallConfig) {
+			ic.Platform.GCP.DefaultMachinePlatform.OSImage = osImage
+			ic.Platform.GCP.DefaultMachinePlatform.OSImage.Name = validImage
+			ic.Platform.GCP.DefaultMachinePlatform.OSImage.Project = projectID
+		}
+		validControlPlaneImage = func(ic *types.InstallConfig) {
+			ic.ControlPlane.Platform.GCP.OSImage = osImage
+			ic.ControlPlane.Platform.GCP.OSImage.Name = validImage
+			ic.ControlPlane.Platform.GCP.OSImage.Project = projectID
+		}
+		validComputeImage = func(ic *types.InstallConfig) {
+			ic.Compute[0].Platform.GCP.OSImage = osImage
+			ic.Compute[0].Platform.GCP.OSImage.Name = validImage
+			ic.Compute[0].Platform.GCP.OSImage.Project = projectID
+		}
+
+		invalidDefaultMachineImage = func(ic *types.InstallConfig) {
+			ic.Platform.GCP.DefaultMachinePlatform.OSImage = osImage
+			ic.Platform.GCP.DefaultMachinePlatform.OSImage.Name = invalidImage
+			ic.Platform.GCP.DefaultMachinePlatform.OSImage.Project = projectID
+		}
+		invalidControlPlaneImage = func(ic *types.InstallConfig) {
+			ic.ControlPlane.Platform.GCP.OSImage = osImage
+			ic.ControlPlane.Platform.GCP.OSImage.Name = invalidImage
+			ic.ControlPlane.Platform.GCP.OSImage.Project = projectID
+		}
+		invalidComputeImage = func(ic *types.InstallConfig) {
+			ic.Compute[0].Platform.GCP.OSImage = osImage
+			ic.Compute[0].Platform.GCP.OSImage.Name = invalidImage
+			ic.Compute[0].Platform.GCP.OSImage.Project = projectID
+		}
+
+		mismatchedDefaultMachineImageArchitecture = func(ic *types.InstallConfig) {
+			ic.Platform.GCP.DefaultMachinePlatform.OSImage = osImage
+			ic.Platform.GCP.DefaultMachinePlatform.OSImage.Name = mismatchedArch
+			ic.Platform.GCP.DefaultMachinePlatform.OSImage.Project = projectID
+			ic.ControlPlane.Architecture = types.ArchitectureARM64
+			ic.Compute[0].Architecture = types.ArchitectureARM64
+		}
+		mismatchedControlPlaneImageArchitecture = func(ic *types.InstallConfig) {
+			ic.ControlPlane.Platform.GCP.OSImage = osImage
+			ic.ControlPlane.Platform.GCP.OSImage.Name = mismatchedArch
+			ic.ControlPlane.Platform.GCP.OSImage.Project = projectID
+			ic.ControlPlane.Architecture = types.ArchitectureARM64
+		}
+		mismatchedComputeImageArchitecture = func(ic *types.InstallConfig) {
+			ic.Compute[0].Platform.GCP.OSImage = osImage
+			ic.Compute[0].Platform.GCP.OSImage.Name = mismatchedArch
+			ic.Compute[0].Platform.GCP.OSImage.Project = projectID
+			ic.Compute[0].Architecture = types.ArchitectureARM64
+		}
+		unspecifiedImageArchitecture = func(ic *types.InstallConfig) {
+			ic.ControlPlane.Platform.GCP.OSImage = osImage
+			ic.ControlPlane.Platform.GCP.OSImage.Name = "unspecified-arch"
+			ic.ControlPlane.Platform.GCP.OSImage.Project = projectID
+		}
+		missingImageArchitecture = func(ic *types.InstallConfig) {
+			ic.ControlPlane.Platform.GCP.OSImage = osImage
+			ic.ControlPlane.Platform.GCP.OSImage.Name = "missing-arch"
+			ic.ControlPlane.Platform.GCP.OSImage.Project = projectID
+		}
+
+		marketplaceImageAPIResult = &compute.Image{
+			Architecture: "X86_64",
+		}
+
+		unspecifiedMarketplaceImageAPIResult = &compute.Image{
+			Architecture: "ARCHITECTURE_UNSPECIFIED",
+		}
+		emptyMarketplaceImageAPIResult = &compute.Image{}
+	)
+
+	cases := []struct {
+		name            string
+		edits           editFunctions
+		expectedError   bool
+		expectedErrMsg  string
+		expectedWarnMsg string //NOTE: this is a REGEXP
+	}{
+		{
+			name:          "Valid default machine image",
+			edits:         editFunctions{validDefaultMachineImage},
+			expectedError: false,
+		},
+		{
+			name:          "Valid control plane image",
+			edits:         editFunctions{validControlPlaneImage},
+			expectedError: false,
+		},
+		{
+			name:          "Valid compute image",
+			edits:         editFunctions{validComputeImage},
+			expectedError: false,
+		},
+		{
+			name:           "Invalid default machine image",
+			edits:          editFunctions{invalidDefaultMachineImage},
+			expectedError:  true,
+			expectedErrMsg: `^\[platform.gcp.defaultMachinePlatform.osImage: Invalid value: gcp.OSImage{Name:"invalid-image", Project:"project-id"}: could not find the boot image: image not found\]$`,
+		},
+		{
+			name:           "Invalid control plane image",
+			edits:          editFunctions{invalidControlPlaneImage},
+			expectedError:  true,
+			expectedErrMsg: `^\[controlPlane.platform.gcp.osImage: Invalid value: gcp.OSImage{Name:"invalid-image", Project:"project-id"}: could not find the boot image: image not found\]$`,
+		},
+		{
+			name:           "Invalid compute image",
+			edits:          editFunctions{invalidComputeImage},
+			expectedError:  true,
+			expectedErrMsg: `^\[compute\[0\].platform.gcp.osImage: Invalid value: gcp.OSImage{Name:"invalid-image", Project:"project-id"}: could not find the boot image: image not found\]$`,
+		},
+		{
+			name:           "Invalid images",
+			edits:          editFunctions{invalidDefaultMachineImage, invalidControlPlaneImage, invalidComputeImage},
+			expectedError:  true,
+			expectedErrMsg: `^\[(.*?\.osImage: Invalid value: gcp\.OSImage\{Name:"invalid-image", Project:"project-id"\}: could not find the boot image: image not found){3}\]$`,
+		},
+		{
+			name:           "Mismatched default machine image architecture",
+			edits:          editFunctions{mismatchedDefaultMachineImageArchitecture},
+			expectedError:  true,
+			expectedErrMsg: `^\[controlPlane.platform.gcp.osImage: Invalid value: gcp.OSImage{Name:"mismatched-arch", Project:"project-id"}: image architecture X86_64 does not match controlPlane node architecture arm64 compute\[0\].platform.gcp.osImage: Invalid value: gcp.OSImage{Name:"mismatched-arch", Project:"project-id"}: image architecture X86_64 does not match compute node architecture arm64]$`,
+		},
+		{
+			name:           "Mismatched control plane image architecture",
+			edits:          editFunctions{mismatchedControlPlaneImageArchitecture},
+			expectedError:  true,
+			expectedErrMsg: `^\[controlPlane.platform.gcp.osImage: Invalid value: gcp.OSImage{Name:"mismatched-arch", Project:"project-id"}: image architecture X86_64 does not match controlPlane node architecture arm64]$`,
+		},
+		{
+			name:           "Mismatched compute image architecture",
+			edits:          editFunctions{mismatchedComputeImageArchitecture},
+			expectedError:  true,
+			expectedErrMsg: `^\[compute\[0\].platform.gcp.osImage: Invalid value: gcp.OSImage{Name:"mismatched-arch", Project:"project-id"}: image architecture X86_64 does not match compute node architecture arm64]$`,
+		},
+		{
+			name:            "Missing image architecture",
+			edits:           editFunctions{missingImageArchitecture},
+			expectedError:   false,
+			expectedWarnMsg: "Boot image architecture is unspecified and might not be compatible with amd64 controlPlane nodes",
+		},
+		{
+			name:            "Unspecified image architecture",
+			edits:           editFunctions{unspecifiedImageArchitecture},
+			expectedError:   false,
+			expectedWarnMsg: "Boot image architecture is unspecified and might not be compatible with amd64 controlPlane nodes",
+		},
+	}
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	gcpClient := mock.NewMockAPI(mockCtrl)
+
+	// Mocks: valid image with matching architecture
+	gcpClient.EXPECT().GetImage(gomock.Any(), gomock.Eq(validImage), gomock.Any()).Return(marketplaceImageAPIResult, nil).AnyTimes()
+
+	//Mocks: invalid image
+	gcpClient.EXPECT().GetImage(gomock.Any(), gomock.Eq(invalidImage), gomock.Any()).Return(marketplaceImageAPIResult, fmt.Errorf("image not found")).AnyTimes()
+
+	//Mocks: valid image with mismatched architecture
+	gcpClient.EXPECT().GetImage(gomock.Any(), gomock.Eq(mismatchedArch), gomock.Any()).Return(marketplaceImageAPIResult, nil).AnyTimes()
+
+	//Mocks: valid image with no specified architecture
+	gcpClient.EXPECT().GetImage(gomock.Any(), gomock.Eq("unspecified-arch"), gomock.Any()).Return(unspecifiedMarketplaceImageAPIResult, nil).AnyTimes()
+	gcpClient.EXPECT().GetImage(gomock.Any(), gomock.Eq("missing-arch"), gomock.Any()).Return(emptyMarketplaceImageAPIResult, nil).AnyTimes()
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			editedInstallConfig := validInstallConfig()
+			for _, edit := range tc.edits {
+				edit(editedInstallConfig)
+			}
+
+			hook := logrusTest.NewGlobal()
+			errs := validateMarketplaceImages(gcpClient, editedInstallConfig)
+			if tc.expectedError {
+				assert.Regexp(t, tc.expectedErrMsg, errs)
+			} else {
+				assert.Empty(t, errs)
+			}
+			if len(tc.expectedWarnMsg) > 0 {
+				assert.Regexp(t, tc.expectedWarnMsg, hook.LastEntry().Message)
 			}
 		})
 	}

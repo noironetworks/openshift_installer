@@ -86,7 +86,7 @@ func TestIgnition_getTemplateData(t *testing.T) {
 	}
 	clusterName := "test-agent-cluster-install.test"
 
-	templateData := getTemplateData(clusterName, pullSecret, releaseImageList, releaseImage, releaseImageMirror, haveMirrorConfig, publicContainerRegistries, agentClusterInstall, infraEnvID, osImage, proxy)
+	templateData := getTemplateData(clusterName, pullSecret, releaseImageList, releaseImage, releaseImageMirror, haveMirrorConfig, publicContainerRegistries, agentClusterInstall, infraEnvID, osImage, proxy, "minimal-iso")
 	assert.Equal(t, clusterName, templateData.ClusterName)
 	assert.Equal(t, "http", templateData.ServiceProtocol)
 	assert.Equal(t, pullSecret, templateData.PullSecret)
@@ -356,8 +356,10 @@ func commonFiles() []string {
 		"/etc/issue",
 		"/etc/multipath.conf",
 		"/etc/containers/containers.conf",
+		"/etc/NetworkManager/conf.d/clientid.conf",
 		"/root/.docker/config.json",
 		"/root/assisted.te",
+		"/usr/local/bin/agent-config-image-wait.sh",
 		"/usr/local/bin/agent-gather",
 		"/usr/local/bin/extract-agent.sh",
 		"/usr/local/bin/get-container-images.sh",
@@ -368,6 +370,7 @@ func commonFiles() []string {
 		"/usr/local/bin/set-node-zero.sh",
 		"/usr/local/share/assisted-service/assisted-db.env",
 		"/usr/local/share/assisted-service/assisted-service.env",
+		"/usr/local/share/start-cluster/start-cluster.env",
 		"/usr/local/share/assisted-service/images.env",
 		"/usr/local/bin/bootstrap-service-record.sh",
 		"/usr/local/bin/release-image.sh",
@@ -377,6 +380,8 @@ func commonFiles() []string {
 		"/etc/systemd/system.conf.d/10-default-env.conf",
 		"/usr/local/bin/install-status.sh",
 		"/usr/local/bin/issue_status.sh",
+		"/usr/local/bin/load-config-iso.sh",
+		"/etc/udev/rules.d/80-agent-config-image.rules",
 	}
 }
 
@@ -394,17 +399,18 @@ func TestIgnition_Generate(t *testing.T) {
 	assert.NoError(t, err)
 
 	cases := []struct {
-		name                                  string
-		overrideDeps                          []asset.Asset
-		expectedError                         string
-		expectedFiles                         []string
-		expectedFileContent                   map[string]string
-		preNetworkManagerConfigServiceEnabled bool
+		name                string
+		overrideDeps        []asset.Asset
+		expectedError       string
+		expectedFiles       []string
+		expectedFileContent map[string]string
+		serviceEnabledMap   map[string]bool
 	}{
 		{
-			name:                                  "no-extra-manifests",
-			preNetworkManagerConfigServiceEnabled: true,
-
+			name: "no-extra-manifests",
+			serviceEnabledMap: map[string]bool{
+				"pre-network-manager-config.service": true,
+				"agent-check-config-image.service":   false},
 			expectedFiles: generatedFiles(),
 		},
 		{
@@ -442,7 +448,9 @@ metadata:
   name: agent-test-2
 `,
 			},
-			preNetworkManagerConfigServiceEnabled: true,
+			serviceEnabledMap: map[string]bool{
+				"pre-network-manager-config.service": true,
+				"agent-check-config-image.service":   false},
 		},
 		{
 			name: "no nmstateconfigs defined, pre-network-manager-config.service should not be enabled",
@@ -480,7 +488,8 @@ metadata:
 					},
 				},
 			},
-			preNetworkManagerConfigServiceEnabled: false,
+			serviceEnabledMap: map[string]bool{
+				"pre-network-manager-config.service": false},
 		},
 	}
 	for _, tc := range cases {
@@ -505,7 +514,7 @@ metadata:
 
 				assertExpectedFiles(t, ignitionAsset.Config, tc.expectedFiles, tc.expectedFileContent)
 
-				assertPreNetworkConfigServiceEnabled(t, ignitionAsset.Config, tc.preNetworkManagerConfigServiceEnabled)
+				assertServiceEnabled(t, ignitionAsset.Config, tc.serviceEnabledMap)
 			}
 		})
 	}
@@ -531,14 +540,16 @@ func overrideDeps(deps []asset.Asset, overrides []asset.Asset) {
 	}
 }
 
-func assertPreNetworkConfigServiceEnabled(t *testing.T, config *igntypes.Config, enabled bool) {
+func assertServiceEnabled(t *testing.T, config *igntypes.Config, serviceEnabledMap map[string]bool) {
 	t.Helper()
-	for _, unit := range config.Systemd.Units {
-		if unit.Name == "pre-network-manager-config.service" {
-			if unit.Enabled == nil {
-				assert.Equal(t, enabled, false)
-			} else {
-				assert.Equal(t, enabled, *unit.Enabled)
+	for serviceName, enabled := range serviceEnabledMap {
+		for _, unit := range config.Systemd.Units {
+			if unit.Name == serviceName {
+				if unit.Enabled == nil {
+					assert.Equal(t, enabled, false)
+				} else {
+					assert.Equal(t, enabled, *unit.Enabled)
+				}
 			}
 		}
 	}

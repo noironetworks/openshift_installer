@@ -28,6 +28,15 @@ func Validate(config *types.InstallConfig) error {
 			fldPath := field.NewPath("compute").Index(idx)
 			allErrs = append(allErrs, validateMachinePool(fldPath, &compute)...)
 		}
+		// Machine pool CIDR check
+		for i := range config.Networking.MachineNetwork {
+			// Each machine pool CIDR must have 24 significant bits (/24)
+			if bits, _ := config.Networking.MachineNetwork[i].CIDR.Mask.Size(); bits != 24 {
+				// If not, create an error displaying the CIDR in the install config vs the expectation (/24)
+				fldPath := field.NewPath("Networking")
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("MachineNetwork").Child("CIDR"), (&config.Networking.MachineNetwork[i].CIDR).String(), "Machine Pool CIDR must be /24."))
+			}
+		}
 	}
 	return allErrs.ToAggregate()
 }
@@ -38,6 +47,32 @@ func validateMachinePool(fldPath *field.Path, machinePool *types.MachinePool) fi
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("architecture"), machinePool.Architecture, []string{"ppc64le"}))
 	}
 	return allErrs
+}
+
+// ValidatePERAvailability ensures the target datacenter has PER enabled.
+func ValidatePERAvailability(client API, ic *types.InstallConfig) error {
+	capabilities, err := client.GetDatacenterCapabilities(context.TODO(), ic.PowerVS.Zone)
+	if err != nil {
+		return err
+	}
+	const per = "power-edge-router"
+	perAvail, ok := capabilities[per]
+	if !ok {
+		return fmt.Errorf("%s capability unknown at: %s", per, ic.PowerVS.Zone)
+	}
+	if !perAvail {
+		return fmt.Errorf("%s is not available at: %s", per, ic.PowerVS.Zone)
+	}
+
+	capabilities, err = client.GetWorkspaceCapabilities(context.TODO(), ic.PowerVS.ServiceInstanceID)
+	if err != nil {
+		return err
+	}
+	if !capabilities[per] {
+		return fmt.Errorf("%s is not available in workspace: %s", per, ic.PowerVS.ServiceInstanceID)
+	}
+
+	return nil
 }
 
 // ValidatePreExistingDNS ensures no pre-existing DNS record exists in the CIS

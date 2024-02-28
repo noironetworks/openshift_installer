@@ -1,0 +1,16 @@
+{{if .IsOKD -}}
+[Unit]
+Description=Pivot bootstrap to the OpenShift Release Image
+Wants=release-image.service
+After=release-image.service
+{{- if .BootstrapInPlace }}
+Before=bootkube.service kubelet.service
+{{ else }}
+Before=bootkube.service
+{{ end -}}
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/bootstrap-pivot.sh
+RemainAfterExit=true
+{{end -}}

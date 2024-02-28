@@ -158,7 +158,7 @@ resource "azurerm_network_interface" "bootstrap" {
 resource "azurerm_network_interface_backend_address_pool_association" "public_lb_bootstrap_v4" {
   // This is required because terraform cannot calculate counts during plan phase completely and therefore the `vnet/public-lb.tf`
   // conditional need to be recreated. See https://github.com/hashicorp/terraform/issues/12570
-  count = (! var.azure_private || ! var.azure_outbound_user_defined_routing) ? 1 : 0
+  count = (! var.azure_private || var.azure_outbound_routing_type != "UserDefinedRouting") ? 1 : 0
 
   network_interface_id    = azurerm_network_interface.bootstrap.id
   backend_address_pool_id = var.elb_backend_pool_v4_id
@@ -168,7 +168,7 @@ resource "azurerm_network_interface_backend_address_pool_association" "public_lb
 resource "azurerm_network_interface_backend_address_pool_association" "public_lb_bootstrap_v6" {
   // This is required because terraform cannot calculate counts during plan phase completely and therefore the `vnet/public-lb.tf`
   // conditional need to be recreated. See https://github.com/hashicorp/terraform/issues/12570
-  count = var.use_ipv6 && (! var.azure_private || ! var.azure_outbound_user_defined_routing) ? 1 : 0
+  count = var.use_ipv6 && (! var.azure_private || var.azure_outbound_routing_type != "UserDefinedRouting") ? 1 : 0
 
   network_interface_id    = azurerm_network_interface.bootstrap.id
   backend_address_pool_id = var.elb_backend_pool_v6_id
@@ -204,6 +204,8 @@ resource "azurerm_linux_virtual_machine" "bootstrap" {
   admin_password                  = "NotActuallyApplied!"
   disable_password_authentication = false
   encryption_at_host_enabled      = var.azure_master_encryption_at_host_enabled
+  secure_boot_enabled             = var.azure_master_secure_boot == "Enabled"
+  vtpm_enabled                    = var.azure_master_virtualized_trusted_platform_module == "Enabled"
 
   identity {
     type         = "UserAssigned"
@@ -216,9 +218,34 @@ resource "azurerm_linux_virtual_machine" "bootstrap" {
     storage_account_type   = var.azure_master_root_volume_type
     disk_size_gb           = 100
     disk_encryption_set_id = var.azure_master_disk_encryption_set_id
+
+    security_encryption_type         = var.azure_master_security_encryption_type
+    secure_vm_disk_encryption_set_id = var.azure_master_secure_vm_disk_encryption_set_id
   }
 
-  source_image_id = var.vm_image
+  # Either source_image_id or source_image_reference must be defined
+  source_image_id = ! var.azure_use_marketplace_image ? var.vm_image : null
+
+  dynamic "source_image_reference" {
+    for_each = var.azure_use_marketplace_image ? [1] : []
+
+    content {
+      publisher = var.azure_marketplace_image_publisher
+      offer     = var.azure_marketplace_image_offer
+      sku       = var.azure_marketplace_image_sku
+      version   = var.azure_marketplace_image_version
+    }
+  }
+
+  dynamic "plan" {
+    for_each = var.azure_use_marketplace_image && var.azure_marketplace_image_has_plan ? [1] : []
+
+    content {
+      publisher = var.azure_marketplace_image_publisher
+      product   = var.azure_marketplace_image_offer
+      name      = var.azure_marketplace_image_sku
+    }
+  }
 
   computer_name = "${var.cluster_id}-bootstrap-vm"
   custom_data   = base64encode(data.ignition_config.redirect.rendered)

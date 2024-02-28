@@ -175,13 +175,13 @@ variable "azure_private" {
   description = "This determines if this is a private cluster or not."
 }
 
-variable "azure_outbound_user_defined_routing" {
-  type    = bool
-  default = false
+variable "azure_outbound_routing_type" {
+  type    = string
+  default = "Loadbalancer"
 
   description = <<EOF
-This determined whether User defined routing will be used for egress to Internet.
-When false, Standard LB will be used for egress to the Internet.
+This determined the routing that will be used for egress to Internet.
+When not set, Standard LB will be used for egress to the Internet.
 EOF
 }
 
@@ -212,3 +212,69 @@ variable "azure_image_release" {
   description = "RHCOS release image version - used when creating the image definition in the gallery"
 }
 
+variable "azure_use_marketplace_image" {
+  type        = bool
+  description = "Whether to use a Marketplace image for all nodes"
+}
+
+variable "azure_marketplace_image_has_plan" {
+  type        = bool
+  description = "Whether the Marketplace image has a purchase plan"
+}
+
+variable "azure_marketplace_image_publisher" {
+  type        = string
+  description = "Publisher of the marketplace image"
+  default     = ""
+}
+
+variable "azure_marketplace_image_offer" {
+  type        = string
+  description = "Offer of the marketplace image"
+  default     = ""
+}
+
+variable "azure_marketplace_image_sku" {
+  type        = string
+  description = "SKU of the marketplace image"
+  default     = ""
+}
+
+variable "azure_marketplace_image_version" {
+  type        = string
+  description = "Version of the marketplace image"
+  default     = ""
+}
+
+variable "azure_master_security_encryption_type" {
+  type    = string
+  default = null
+
+  description = <<EOF
+Defines the encryption type when the Virtual Machine is a Confidential VM. Possible values are VMGuestStateOnly and DiskWithVMGuestState.
+When set to "VMGuestStateOnly" azure_master_vtpm_enabled should be set to true.
+When set to "DiskWithVMGuestState" both azure_master_vtp_enabled and azure_master_secure_boot_enabled should be true.
+EOF
+}
+
+variable "azure_master_secure_vm_disk_encryption_set_id" {
+  type = string
+  default = null
+
+  description = <<EOF
+Defines the ID of the Disk Encryption Set which should be used to encrypt this OS Disk when the Virtual Machine is a Confidential VM.
+It can only be set when azure_master_security_encryption_type is set to "DiskWithVMGuestState".
+EOF
+}
+
+variable "azure_master_secure_boot" {
+  type        = string
+  description = "Defines whether the instance should have secure boot enabled."
+  default     = ""
+}
+
+variable "azure_master_virtualized_trusted_platform_module" {
+  type        = string
+  description = "Defines whether the instance should have vTPM enabled."
+  default     = ""
+}

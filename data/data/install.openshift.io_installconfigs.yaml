@@ -76,6 +76,9 @@ spec:
                   - CSISnapshot
                   - NodeTuning
                   - MachineAPI
+                  - Build
+                  - DeploymentConfig
+                  - ImageRegistry
                   type: string
                 type: array
               baselineCapabilitySet:
@@ -284,6 +287,51 @@ spec:
                               - Premium_LRS
                               - StandardSSD_LRS
                               type: string
+                            securityProfile:
+                              description: SecurityProfile specifies the security
+                                profile for the managed disk.
+                              properties:
+                                diskEncryptionSet:
+                                  description: DiskEncryptionSet specifies the customer
+                                    managed disk encryption set resource id for the
+                                    managed disk that is used for Customer Managed
+                                    Key encrypted ConfidentialVM OS Disk and VMGuestState
+                                    blob.
+                                  properties:
+                                    name:
+                                      description: Name is the name of the disk encryption
+                                        set.
+                                      type: string
+                                    resourceGroup:
+                                      description: ResourceGroup defines the Azure
+                                        resource group used by the disk encryption
+                                        set.
+                                      type: string
+                                    subscriptionId:
+                                      description: SubscriptionID defines the Azure
+                                        subscription the disk encryption set is in.
+                                      type: string
+                                  required:
+                                  - name
+                                  - resourceGroup
+                                  - subscriptionId
+                                  type: object
+                                securityEncryptionType:
+                                  description: SecurityEncryptionType specifies the
+                                    encryption type of the managed disk. It is set
+                                    to DiskWithVMGuestState to encrypt the managed
+                                    disk along with the VMGuestState blob, and to
+                                    VMGuestStateOnly to encrypt the VMGuestState blob
+                                    only. When set to VMGuestStateOnly, the VTpmEnabled
+                                    should be set to true. When set to DiskWithVMGuestState,
+                                    both SecureBootEnabled and VTpmEnabled should
+                                    be set to true. It can be set only for Confidential
+                                    VMs.
+                                  enum:
+                                  - VMGuestStateOnly
+                                  - DiskWithVMGuestState
+                                  type: string
+                              type: object
                           required:
                           - diskSizeGB
                           type: object
@@ -292,6 +340,13 @@ spec:
                           properties:
                             offer:
                               description: Offer is the offer of the image.
+                              type: string
+                            plan:
+                              description: Plan is the purchase plan of the image.
+                                If omitted, it defaults to "WithPurchasePlan".
+                              enum:
+                              - WithPurchasePlan
+                              - NoPurchasePlan
                               type: string
                             publisher:
                               description: Publisher is the publisher of the image.
@@ -307,6 +362,108 @@ spec:
                           - publisher
                           - sku
                           - version
+                          type: object
+                        settings:
+                          description: Settings specify the security type and the
+                            UEFI settings of the virtual machine. This field can be
+                            set for Confidential VMs and Trusted Launch for VMs.
+                          properties:
+                            confidentialVM:
+                              description: 'ConfidentialVM specifies the security
+                                configuration of the virtual machine. For more information
+                                regarding Confidential VMs, please refer to: https://learn.microsoft.com/azure/confidential-computing/confidential-vm-overview'
+                              properties:
+                                uefiSettings:
+                                  description: UEFISettings specifies the security
+                                    settings like secure boot and vTPM used while
+                                    creating the virtual machine.
+                                  properties:
+                                    secureBoot:
+                                      description: SecureBoot specifies whether secure
+                                        boot should be enabled on the virtual machine.
+                                        Secure Boot verifies the digital signature
+                                        of all boot components and halts the boot
+                                        process if signature verification fails. If
+                                        omitted, the platform chooses a default, which
+                                        is subject to change over time, currently
+                                        that default is disabled.
+                                      enum:
+                                      - Enabled
+                                      - Disabled
+                                      type: string
+                                    virtualizedTrustedPlatformModule:
+                                      description: VirtualizedTrustedPlatformModule
+                                        specifies whether vTPM should be enabled on
+                                        the virtual machine. When enabled the virtualized
+                                        trusted platform module measurements are used
+                                        to create a known good boot integrity policy
+                                        baseline. The integrity policy baseline is
+                                        used for comparison with measurements from
+                                        subsequent VM boots to determine if anything
+                                        has changed. This is required to be set to
+                                        enabled if the SecurityEncryptionType is defined.
+                                        If omitted, the platform chooses a default,
+                                        which is subject to change over time, currently
+                                        that default is disabled.
+                                      enum:
+                                      - Enabled
+                                      - Disabled
+                                      type: string
+                                  type: object
+                              type: object
+                            securityType:
+                              description: 'SecurityType specifies the SecurityType
+                                of the virtual machine. It has to be set to any specified
+                                value to enable secure boot and vTPM. The default
+                                behavior is: secure boot and vTPM will not be enabled
+                                unless this property is set.'
+                              enum:
+                              - ConfidentialVM
+                              - TrustedLaunch
+                              type: string
+                            trustedLaunch:
+                              description: 'TrustedLaunch specifies the security configuration
+                                of the virtual machine. For more information regarding
+                                TrustedLaunch for VMs, please refer to: https://learn.microsoft.com/azure/virtual-machines/trusted-launch'
+                              properties:
+                                uefiSettings:
+                                  description: UEFISettings specifies the security
+                                    settings like secure boot and vTPM used while
+                                    creating the virtual machine.
+                                  properties:
+                                    secureBoot:
+                                      description: SecureBoot specifies whether secure
+                                        boot should be enabled on the virtual machine.
+                                        Secure Boot verifies the digital signature
+                                        of all boot components and halts the boot
+                                        process if signature verification fails. If
+                                        omitted, the platform chooses a default, which
+                                        is subject to change over time, currently
+                                        that default is disabled.
+                                      enum:
+                                      - Enabled
+                                      - Disabled
+                                      type: string
+                                    virtualizedTrustedPlatformModule:
+                                      description: VirtualizedTrustedPlatformModule
+                                        specifies whether vTPM should be enabled on
+                                        the virtual machine. When enabled the virtualized
+                                        trusted platform module measurements are used
+                                        to create a known good boot integrity policy
+                                        baseline. The integrity policy baseline is
+                                        used for comparison with measurements from
+                                        subsequent VM boots to determine if anything
+                                        has changed. This is required to be set to
+                                        enabled if the SecurityEncryptionType is defined.
+                                        If omitted, the platform chooses a default,
+                                        which is subject to change over time, currently
+                                        that default is disabled.
+                                      enum:
+                                      - Enabled
+                                      - Disabled
+                                      type: string
+                                  type: object
+                              type: object
                           type: object
                         type:
                           description: InstanceType defines the azure instance type.
@@ -378,6 +535,7 @@ spec:
                               description: DiskType defines the type of disk. For
                                 control plane nodes, the valid value is pd-ssd.
                               enum:
+                              - pd-balanced
                               - pd-ssd
                               - pd-standard
                               type: string
@@ -423,6 +581,20 @@ spec:
                           required:
                           - DiskSizeGB
                           type: object
+                        osImage:
+                          description: OSImage defines a custom image for instance.
+                          properties:
+                            name:
+                              description: Name defines the name of the image.
+                              type: string
+                            project:
+                              description: Project defines the name of the project
+                                containing the image.
+                              type: string
+                          required:
+                          - name
+                          - project
+                          type: object
                         secureBoot:
                           description: SecureBoot Defines whether the instance should
                             have secure boot enabled. secure boot Verify the digital
@@ -433,6 +605,14 @@ spec:
                           enum:
                           - Enabled
                           - Disabled
+                          type: string
+                        serviceAccount:
+                          description: ServiceAccount is the email of a gcp service
+                            account to be used for shared vpc installations. The provided
+                            service account will be attached to control-plane nodes
+                            in order to provide the permissions required by the cloud
+                            provider in the host project. This field is only supported
+                            in the control-plane machinepool.
                           type: string
                         tags:
                           description: Tags defines a set of network tags which will
@@ -622,8 +802,16 @@ spec:
                                 gibibytes (GiB). Required
                               type: integer
                             type:
-                              description: Type defines the type of the volume. Required
+                              description: 'Type defines the type of the volume. Deprecated:
+                                Use Types instead.'
                               type: string
+                            types:
+                              description: Types is the list of the volume types of
+                                the root volumes. This is mutually exclusive with
+                                Type.
+                              items:
+                                type: string
+                              type: array
                             zones:
                               description: Zones is the list of availability zones
                                 where the root volumes should be deployed. If no zones
@@ -634,7 +822,7 @@ spec:
                               type: array
                           required:
                           - size
-                          - type
+                          - types
                           type: object
                         serverGroupPolicy:
                           description: ServerGroupPolicy will be used to create the
@@ -1034,6 +1222,49 @@ spec:
                             - Premium_LRS
                             - StandardSSD_LRS
                             type: string
+                          securityProfile:
+                            description: SecurityProfile specifies the security profile
+                              for the managed disk.
+                            properties:
+                              diskEncryptionSet:
+                                description: DiskEncryptionSet specifies the customer
+                                  managed disk encryption set resource id for the
+                                  managed disk that is used for Customer Managed Key
+                                  encrypted ConfidentialVM OS Disk and VMGuestState
+                                  blob.
+                                properties:
+                                  name:
+                                    description: Name is the name of the disk encryption
+                                      set.
+                                    type: string
+                                  resourceGroup:
+                                    description: ResourceGroup defines the Azure resource
+                                      group used by the disk encryption set.
+                                    type: string
+                                  subscriptionId:
+                                    description: SubscriptionID defines the Azure
+                                      subscription the disk encryption set is in.
+                                    type: string
+                                required:
+                                - name
+                                - resourceGroup
+                                - subscriptionId
+                                type: object
+                              securityEncryptionType:
+                                description: SecurityEncryptionType specifies the
+                                  encryption type of the managed disk. It is set to
+                                  DiskWithVMGuestState to encrypt the managed disk
+                                  along with the VMGuestState blob, and to VMGuestStateOnly
+                                  to encrypt the VMGuestState blob only. When set
+                                  to VMGuestStateOnly, the VTpmEnabled should be set
+                                  to true. When set to DiskWithVMGuestState, both
+                                  SecureBootEnabled and VTpmEnabled should be set
+                                  to true. It can be set only for Confidential VMs.
+                                enum:
+                                - VMGuestStateOnly
+                                - DiskWithVMGuestState
+                                type: string
+                            type: object
                         required:
                         - diskSizeGB
                         type: object
@@ -1042,6 +1273,13 @@ spec:
                         properties:
                           offer:
                             description: Offer is the offer of the image.
+                            type: string
+                          plan:
+                            description: Plan is the purchase plan of the image. If
+                              omitted, it defaults to "WithPurchasePlan".
+                            enum:
+                            - WithPurchasePlan
+                            - NoPurchasePlan
                             type: string
                           publisher:
                             description: Publisher is the publisher of the image.
@@ -1057,6 +1295,108 @@ spec:
                         - publisher
                         - sku
                         - version
+                        type: object
+                      settings:
+                        description: Settings specify the security type and the UEFI
+                          settings of the virtual machine. This field can be set for
+                          Confidential VMs and Trusted Launch for VMs.
+                        properties:
+                          confidentialVM:
+                            description: 'ConfidentialVM specifies the security configuration
+                              of the virtual machine. For more information regarding
+                              Confidential VMs, please refer to: https://learn.microsoft.com/azure/confidential-computing/confidential-vm-overview'
+                            properties:
+                              uefiSettings:
+                                description: UEFISettings specifies the security settings
+                                  like secure boot and vTPM used while creating the
+                                  virtual machine.
+                                properties:
+                                  secureBoot:
+                                    description: SecureBoot specifies whether secure
+                                      boot should be enabled on the virtual machine.
+                                      Secure Boot verifies the digital signature of
+                                      all boot components and halts the boot process
+                                      if signature verification fails. If omitted,
+                                      the platform chooses a default, which is subject
+                                      to change over time, currently that default
+                                      is disabled.
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                  virtualizedTrustedPlatformModule:
+                                    description: VirtualizedTrustedPlatformModule
+                                      specifies whether vTPM should be enabled on
+                                      the virtual machine. When enabled the virtualized
+                                      trusted platform module measurements are used
+                                      to create a known good boot integrity policy
+                                      baseline. The integrity policy baseline is used
+                                      for comparison with measurements from subsequent
+                                      VM boots to determine if anything has changed.
+                                      This is required to be set to enabled if the
+                                      SecurityEncryptionType is defined. If omitted,
+                                      the platform chooses a default, which is subject
+                                      to change over time, currently that default
+                                      is disabled.
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                type: object
+                            type: object
+                          securityType:
+                            description: 'SecurityType specifies the SecurityType
+                              of the virtual machine. It has to be set to any specified
+                              value to enable secure boot and vTPM. The default behavior
+                              is: secure boot and vTPM will not be enabled unless
+                              this property is set.'
+                            enum:
+                            - ConfidentialVM
+                            - TrustedLaunch
+                            type: string
+                          trustedLaunch:
+                            description: 'TrustedLaunch specifies the security configuration
+                              of the virtual machine. For more information regarding
+                              TrustedLaunch for VMs, please refer to: https://learn.microsoft.com/azure/virtual-machines/trusted-launch'
+                            properties:
+                              uefiSettings:
+                                description: UEFISettings specifies the security settings
+                                  like secure boot and vTPM used while creating the
+                                  virtual machine.
+                                properties:
+                                  secureBoot:
+                                    description: SecureBoot specifies whether secure
+                                      boot should be enabled on the virtual machine.
+                                      Secure Boot verifies the digital signature of
+                                      all boot components and halts the boot process
+                                      if signature verification fails. If omitted,
+                                      the platform chooses a default, which is subject
+                                      to change over time, currently that default
+                                      is disabled.
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                  virtualizedTrustedPlatformModule:
+                                    description: VirtualizedTrustedPlatformModule
+                                      specifies whether vTPM should be enabled on
+                                      the virtual machine. When enabled the virtualized
+                                      trusted platform module measurements are used
+                                      to create a known good boot integrity policy
+                                      baseline. The integrity policy baseline is used
+                                      for comparison with measurements from subsequent
+                                      VM boots to determine if anything has changed.
+                                      This is required to be set to enabled if the
+                                      SecurityEncryptionType is defined. If omitted,
+                                      the platform chooses a default, which is subject
+                                      to change over time, currently that default
+                                      is disabled.
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                type: object
+                            type: object
                         type: object
                       type:
                         description: InstanceType defines the azure instance type.
@@ -1126,6 +1466,7 @@ spec:
                             description: DiskType defines the type of disk. For control
                               plane nodes, the valid value is pd-ssd.
                             enum:
+                            - pd-balanced
                             - pd-ssd
                             - pd-standard
                             type: string
@@ -1171,6 +1512,20 @@ spec:
                         required:
                         - DiskSizeGB
                         type: object
+                      osImage:
+                        description: OSImage defines a custom image for instance.
+                        properties:
+                          name:
+                            description: Name defines the name of the image.
+                            type: string
+                          project:
+                            description: Project defines the name of the project containing
+                              the image.
+                            type: string
+                        required:
+                        - name
+                        - project
+                        type: object
                       secureBoot:
                         description: SecureBoot Defines whether the instance should
                           have secure boot enabled. secure boot Verify the digital
@@ -1181,6 +1536,14 @@ spec:
                         enum:
                         - Enabled
                         - Disabled
+                        type: string
+                      serviceAccount:
+                        description: ServiceAccount is the email of a gcp service
+                          account to be used for shared vpc installations. The provided
+                          service account will be attached to control-plane nodes
+                          in order to provide the permissions required by the cloud
+                          provider in the host project. This field is only supported
+                          in the control-plane machinepool.
                         type: string
                       tags:
                         description: Tags defines a set of network tags which will
@@ -1367,8 +1730,15 @@ spec:
                               (GiB). Required
                             type: integer
                           type:
-                            description: Type defines the type of the volume. Required
+                            description: 'Type defines the type of the volume. Deprecated:
+                              Use Types instead.'
                             type: string
+                          types:
+                            description: Types is the list of the volume types of
+                              the root volumes. This is mutually exclusive with Type.
+                            items:
+                              type: string
+                            type: array
                           zones:
                             description: Zones is the list of availability zones where
                               the root volumes should be deployed. If no zones are
@@ -1379,7 +1749,7 @@ spec:
                             type: array
                         required:
                         - size
-                        - type
+                        - types
                         type: object
                       serverGroupPolicy:
                         description: ServerGroupPolicy will be used to create the
@@ -1594,7 +1964,7 @@ spec:
               workloads to specific CPU Sets. This does not make any decisions on
               workloads it only configures the nodes to allow CPU Partitioning. The
               "AllNodes" value will setup all nodes for CPU Partitioning, the default
-              is "None". This feature is currently in TechPreview.
+              is "None".
             enum:
             - None
             - AllNodes
@@ -1995,6 +2365,11 @@ spec:
                       \n If this field is not set explicitly, it defaults to \"Classic\".
                       \ This default is subject to change over time."
                     type: string
+                  preserveBootstrapIgnition:
+                    description: PreserveBootstrapIgnition is an optional field that
+                      can be used to make the S3 deletion optional during bootstrap
+                      destroy.
+                    type: boolean
                   propagateUserTags:
                     description: PropagateUserTags is a flag that directs in-cluster
                       operators to include the specified user tags in the tags of
@@ -2129,6 +2504,49 @@ spec:
                             - Premium_LRS
                             - StandardSSD_LRS
                             type: string
+                          securityProfile:
+                            description: SecurityProfile specifies the security profile
+                              for the managed disk.
+                            properties:
+                              diskEncryptionSet:
+                                description: DiskEncryptionSet specifies the customer
+                                  managed disk encryption set resource id for the
+                                  managed disk that is used for Customer Managed Key
+                                  encrypted ConfidentialVM OS Disk and VMGuestState
+                                  blob.
+                                properties:
+                                  name:
+                                    description: Name is the name of the disk encryption
+                                      set.
+                                    type: string
+                                  resourceGroup:
+                                    description: ResourceGroup defines the Azure resource
+                                      group used by the disk encryption set.
+                                    type: string
+                                  subscriptionId:
+                                    description: SubscriptionID defines the Azure
+                                      subscription the disk encryption set is in.
+                                    type: string
+                                required:
+                                - name
+                                - resourceGroup
+                                - subscriptionId
+                                type: object
+                              securityEncryptionType:
+                                description: SecurityEncryptionType specifies the
+                                  encryption type of the managed disk. It is set to
+                                  DiskWithVMGuestState to encrypt the managed disk
+                                  along with the VMGuestState blob, and to VMGuestStateOnly
+                                  to encrypt the VMGuestState blob only. When set
+                                  to VMGuestStateOnly, the VTpmEnabled should be set
+                                  to true. When set to DiskWithVMGuestState, both
+                                  SecureBootEnabled and VTpmEnabled should be set
+                                  to true. It can be set only for Confidential VMs.
+                                enum:
+                                - VMGuestStateOnly
+                                - DiskWithVMGuestState
+                                type: string
+                            type: object
                         required:
                         - diskSizeGB
                         type: object
@@ -2137,6 +2555,13 @@ spec:
                         properties:
                           offer:
                             description: Offer is the offer of the image.
+                            type: string
+                          plan:
+                            description: Plan is the purchase plan of the image. If
+                              omitted, it defaults to "WithPurchasePlan".
+                            enum:
+                            - WithPurchasePlan
+                            - NoPurchasePlan
                             type: string
                           publisher:
                             description: Publisher is the publisher of the image.
@@ -2152,6 +2577,108 @@ spec:
                         - publisher
                         - sku
                         - version
+                        type: object
+                      settings:
+                        description: Settings specify the security type and the UEFI
+                          settings of the virtual machine. This field can be set for
+                          Confidential VMs and Trusted Launch for VMs.
+                        properties:
+                          confidentialVM:
+                            description: 'ConfidentialVM specifies the security configuration
+                              of the virtual machine. For more information regarding
+                              Confidential VMs, please refer to: https://learn.microsoft.com/azure/confidential-computing/confidential-vm-overview'
+                            properties:
+                              uefiSettings:
+                                description: UEFISettings specifies the security settings
+                                  like secure boot and vTPM used while creating the
+                                  virtual machine.
+                                properties:
+                                  secureBoot:
+                                    description: SecureBoot specifies whether secure
+                                      boot should be enabled on the virtual machine.
+                                      Secure Boot verifies the digital signature of
+                                      all boot components and halts the boot process
+                                      if signature verification fails. If omitted,
+                                      the platform chooses a default, which is subject
+                                      to change over time, currently that default
+                                      is disabled.
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                  virtualizedTrustedPlatformModule:
+                                    description: VirtualizedTrustedPlatformModule
+                                      specifies whether vTPM should be enabled on
+                                      the virtual machine. When enabled the virtualized
+                                      trusted platform module measurements are used
+                                      to create a known good boot integrity policy
+                                      baseline. The integrity policy baseline is used
+                                      for comparison with measurements from subsequent
+                                      VM boots to determine if anything has changed.
+                                      This is required to be set to enabled if the
+                                      SecurityEncryptionType is defined. If omitted,
+                                      the platform chooses a default, which is subject
+                                      to change over time, currently that default
+                                      is disabled.
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                type: object
+                            type: object
+                          securityType:
+                            description: 'SecurityType specifies the SecurityType
+                              of the virtual machine. It has to be set to any specified
+                              value to enable secure boot and vTPM. The default behavior
+                              is: secure boot and vTPM will not be enabled unless
+                              this property is set.'
+                            enum:
+                            - ConfidentialVM
+                            - TrustedLaunch
+                            type: string
+                          trustedLaunch:
+                            description: 'TrustedLaunch specifies the security configuration
+                              of the virtual machine. For more information regarding
+                              TrustedLaunch for VMs, please refer to: https://learn.microsoft.com/azure/virtual-machines/trusted-launch'
+                            properties:
+                              uefiSettings:
+                                description: UEFISettings specifies the security settings
+                                  like secure boot and vTPM used while creating the
+                                  virtual machine.
+                                properties:
+                                  secureBoot:
+                                    description: SecureBoot specifies whether secure
+                                      boot should be enabled on the virtual machine.
+                                      Secure Boot verifies the digital signature of
+                                      all boot components and halts the boot process
+                                      if signature verification fails. If omitted,
+                                      the platform chooses a default, which is subject
+                                      to change over time, currently that default
+                                      is disabled.
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                  virtualizedTrustedPlatformModule:
+                                    description: VirtualizedTrustedPlatformModule
+                                      specifies whether vTPM should be enabled on
+                                      the virtual machine. When enabled the virtualized
+                                      trusted platform module measurements are used
+                                      to create a known good boot integrity policy
+                                      baseline. The integrity policy baseline is used
+                                      for comparison with measurements from subsequent
+                                      VM boots to determine if anything has changed.
+                                      This is required to be set to enabled if the
+                                      SecurityEncryptionType is defined. If omitted,
+                                      the platform chooses a default, which is subject
+                                      to change over time, currently that default
+                                      is disabled.
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                type: object
+                            type: object
                         type: object
                       type:
                         description: InstanceType defines the azure instance type.
@@ -2187,10 +2714,12 @@ spec:
                   outboundType:
                     default: Loadbalancer
                     description: OutboundType is a strategy for how egress from cluster
-                      is achieved. When not specified default is "Loadbalancer".
+                      is achieved. When not specified default is "Loadbalancer". "NatGateway"
+                      is only available in TechPreview.
                     enum:
                     - ""
                     - Loadbalancer
+                    - NatGateway
                     - UserDefinedRouting
                     type: string
                   region:
@@ -2487,6 +3016,26 @@ spec:
                 required:
                 - hosts
                 type: object
+              external:
+                description: External is the configuration used when installing on
+                  an external cloud provider.
+                properties:
+                  cloudControllerManager:
+                    default: ""
+                    description: CloudControllerManager when set to external, this
+                      property will enable an external cloud provider.
+                    enum:
+                    - ""
+                    - External
+                    type: string
+                  platformName:
+                    default: Unknown
+                    description: PlatformName holds the arbitrary string representing
+                      the infrastructure provider name, expected to be set at the
+                      installation time. This field is solely for informational and
+                      reporting purposes and is not expected to be used for decision-making.
+                    type: string
+                type: object
               gcp:
                 description: GCP is the configuration used when installing on Google
                   Cloud Platform.
@@ -2539,6 +3088,7 @@ spec:
                             description: DiskType defines the type of disk. For control
                               plane nodes, the valid value is pd-ssd.
                             enum:
+                            - pd-balanced
                             - pd-ssd
                             - pd-standard
                             type: string
@@ -2584,6 +3134,20 @@ spec:
                         required:
                         - DiskSizeGB
                         type: object
+                      osImage:
+                        description: OSImage defines a custom image for instance.
+                        properties:
+                          name:
+                            description: Name defines the name of the image.
+                            type: string
+                          project:
+                            description: Project defines the name of the project containing
+                              the image.
+                            type: string
+                        required:
+                        - name
+                        - project
+                        type: object
                       secureBoot:
                         description: SecureBoot Defines whether the instance should
                           have secure boot enabled. secure boot Verify the digital
@@ -2594,6 +3158,14 @@ spec:
                         enum:
                         - Enabled
                         - Disabled
+                        type: string
+                      serviceAccount:
+                        description: ServiceAccount is the email of a gcp service
+                          account to be used for shared vpc installations. The provided
+                          service account will be attached to control-plane nodes
+                          in order to provide the permissions required by the cloud
+                          provider in the host project. This field is only supported
+                          in the control-plane machinepool.
                         type: string
                       tags:
                         description: Tags defines a set of network tags which will
@@ -2612,16 +3184,6 @@ spec:
                           type: string
                         type: array
                     type: object
-                  licenses:
-                    description: Licenses is a list of licenses to apply to the compute
-                      images The value should a list of strings (https URLs only)
-                      representing the license keys. When set, this will cause the
-                      installer to copy the image into user's project. This option
-                      is incompatible with any mechanism that makes use of pre-built
-                      images such as the current env OPENSHIFT_INSTALL_OS_IMAGE_OVERRIDE
-                    items:
-                      type: string
-                    type: array
                   network:
                     description: Network specifies an existing VPC where the cluster
                       should be created rather than provisioning a new one.
@@ -2638,6 +3200,81 @@ spec:
                     description: Region specifies the GCP region where the cluster
                       will be created.
                     type: string
+                  userLabels:
+                    description: userLabels has additional keys and values that the
+                      installer will add as labels to all resources that it creates
+                      on GCP. Resources created by the cluster itself may not include
+                      these labels. This is a TechPreview feature and requires setting
+                      CustomNoUpgrade featureSet with GCPLabelsTags featureGate enabled
+                      or TechPreviewNoUpgrade featureSet to configure labels.
+                    items:
+                      description: UserLabel is a label to apply to GCP resources
+                        created for the cluster.
+                      properties:
+                        key:
+                          description: key is the key part of the label. A label key
+                            can have a maximum of 63 characters and cannot be empty.
+                            Label must begin with a lowercase letter, and must contain
+                            only lowercase letters, numeric characters, and the following
+                            special characters `_-`.
+                          type: string
+                        value:
+                          description: value is the value part of the label. A label
+                            value can have a maximum of 63 characters and cannot be
+                            empty. Value must contain only lowercase letters, numeric
+                            characters, and the following special characters `_-`.
+                          type: string
+                      required:
+                      - key
+                      - value
+                      type: object
+                    type: array
+                  userTags:
+                    description: userTags has additional keys and values that the
+                      installer will add as tags to all resources that it creates
+                      on GCP. Resources created by the cluster itself may not include
+                      these tags. Tag key and tag value should be the shortnames of
+                      the tag key and tag value resource. This is a TechPreview feature
+                      and requires setting CustomNoUpgrade featureSet with GCPLabelsTags
+                      featureGate enabled or TechPreviewNoUpgrade featureSet to configure
+                      tags.
+                    items:
+                      description: UserTag is a tag to apply to GCP resources created
+                        for the cluster.
+                      properties:
+                        key:
+                          description: key is the key part of the tag. A tag key can
+                            have a maximum of 63 characters and cannot be empty. Tag
+                            key must begin and end with an alphanumeric character,
+                            and must contain only uppercase, lowercase alphanumeric
+                            characters, and the following special characters `._-`.
+                          type: string
+                        parentID:
+                          description: 'parentID is the ID of the hierarchical resource
+                            where the tags are defined, e.g. at the Organization or
+                            the Project level. To find the Organization ID or Project
+                            ID refer to the following pages: https://cloud.google.com/resource-manager/docs/creating-managing-organization#retrieving_your_organization_id,
+                            https://cloud.google.com/resource-manager/docs/creating-managing-projects#identifying_projects.
+                            An OrganizationID must consist of decimal numbers, and
+                            cannot have leading zeroes. A ProjectID must be 6 to 30
+                            characters in length, can only contain lowercase letters,
+                            numbers, and hyphens, and must start with a letter, and
+                            cannot end with a hyphen.'
+                          type: string
+                        value:
+                          description: value is the value part of the tag. A tag value
+                            can have a maximum of 63 characters and cannot be empty.
+                            Tag value must begin and end with an alphanumeric character,
+                            and must contain only uppercase, lowercase alphanumeric
+                            characters, and the following special characters `_-.@%=+:,*#&(){}[]`
+                            and spaces.
+                          type: string
+                      required:
+                      - key
+                      - parentID
+                      - value
+                      type: object
+                    type: array
                 required:
                 - projectID
                 - region
@@ -3057,6 +3694,49 @@ spec:
                       use for instances in this cluster. Deprecated: use FlavorName
                       in DefaultMachinePlatform to define default flavor.'
                     type: string
+                  controlPlanePort:
+                    description: ControlPlanePort contains details of the network
+                      attached to the control plane port, with the network either
+                      containing one openstack subnet for IPv4 or two openstack subnets
+                      for dualstack clusters. Providing this configuration will prevent
+                      OpenShift from managing or updating this network and its subnets.
+                      The network and its subnets will be used during creation of
+                      all nodes. This is a TechPreview feature and requires setting
+                      featureSet to TechPreviewNoUpgrade.
+                    properties:
+                      fixedIPs:
+                        description: Specify subnets of the network where control
+                          plane port will be discovered.
+                        items:
+                          description: FixedIP identifies a subnet defined by a subnet
+                            filter.
+                          properties:
+                            subnet:
+                              description: SubnetFilter defines a subnet by ID and/or
+                                name.
+                              properties:
+                                id:
+                                  type: string
+                                name:
+                                  type: string
+                              type: object
+                          required:
+                          - subnet
+                          type: object
+                        type: array
+                      network:
+                        description: Network is a query for an openstack network that
+                          the port will be discovered on. This will fail if the query
+                          returns more than one network.
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
+                        type: object
+                    required:
+                    - fixedIPs
+                    type: object
                   defaultMachinePlatform:
                     description: DefaultMachinePlatform is the default configuration
                       used when installing on OpenStack for machine pools which do
@@ -3087,8 +3767,15 @@ spec:
                               (GiB). Required
                             type: integer
                           type:
-                            description: Type defines the type of the volume. Required
+                            description: 'Type defines the type of the volume. Deprecated:
+                              Use Types instead.'
                             type: string
+                          types:
+                            description: Types is the list of the volume types of
+                              the root volumes. This is mutually exclusive with Type.
+                            items:
+                              type: string
+                            type: array
                           zones:
                             description: Zones is the list of availability zones where
                               the root volumes should be deployed. If no zones are
@@ -3099,7 +3786,7 @@ spec:
                             type: array
                         required:
                         - size
-                        - type
+                        - types
                         type: object
                       serverGroupPolicy:
                         description: ServerGroupPolicy will be used to create the
@@ -3190,11 +3877,12 @@ spec:
                         type: string
                     type: object
                   machinesSubnet:
-                    description: MachinesSubnet is the UUIDv4 of an openstack subnet.
-                      This subnet will be used by all nodes created by the installer.
-                      By setting this, the installer will no longer create a network
-                      and subnet. The subnet and network specified in MachinesSubnet
-                      will not be deleted or modified by the installer.
+                    description: 'DeprecatedMachinesSubnet is a string of the UUIDv4
+                      of an openstack subnet. This subnet will be used by all nodes
+                      created by the installer. By setting this, the installer will
+                      no longer create a network and subnet. The subnet and network
+                      specified in MachinesSubnet will not be deleted or modified
+                      by the installer. Deprecated: Use ControlPlanePort'
                     type: string
                   octaviaSupport:
                     description: 'OctaviaSupport holds a `0` or `1` value that indicates
@@ -3705,6 +4393,62 @@ spec:
                       Use FailureDomains.Topology.Folder'
                     pattern: ^/.*?/vm/.*?
                     type: string
+                  hosts:
+                    description: Hosts defines network configurations to be applied
+                      by the installer. Hosts is available in TechPreview.
+                    items:
+                      description: Host defines host VMs to generate as part of the
+                        installation.
+                      properties:
+                        failureDomain:
+                          description: FailureDomain refers to the name of a FailureDomain
+                            as described in https://github.com/openshift/enhancements/blob/master/enhancements/installer/vsphere-ipi-zonal.md
+                          type: string
+                        networkDevice:
+                          description: NetworkDeviceSpec to be applied to the host
+                          properties:
+                            gateway:
+                              description: gateway is an IPv4 or IPv6 address which
+                                represents the subnet gateway, for example, 192.168.1.1.
+                              format: ipv6
+                              type: string
+                            ipAddrs:
+                              description: ipAddrs is a list of one or more IPv4 and/or
+                                IPv6 addresses and CIDR to assign to this device,
+                                for example, 192.168.1.100/24. IP addresses provided
+                                via ipAddrs are intended to allow explicit assignment
+                                of a machine's IP address.
+                              format: ipv6
+                              items:
+                                type: string
+                              type: array
+                            nameservers:
+                              description: nameservers is a list of IPv4 and/or IPv6
+                                addresses used as DNS nameservers, for example, 8.8.8.8.
+                                a nameserver is not provided by a fulfilled IPAddressClaim.
+                                If DHCP is not the source of IP addresses for this
+                                network device, nameservers should include a valid
+                                nameserver.
+                              format: ipv6
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - ipAddrs
+                          type: object
+                        role:
+                          description: Role defines the role of the node
+                          enum:
+                          - ""
+                          - bootstrap
+                          - control-plane
+                          - compute
+                          type: string
+                      required:
+                      - networkDevice
+                      - role
+                      type: object
+                    type: array
                   ingressVIP:
                     description: 'DeprecatedIngressVIP is the virtual IP address for
                       ingress Deprecated: Use IngressVIPs'

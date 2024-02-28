@@ -26,6 +26,7 @@ import (
 	typesaws "github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
 	"github.com/openshift/installer/pkg/types/baremetal"
+	"github.com/openshift/installer/pkg/types/external"
 	typesgcp "github.com/openshift/installer/pkg/types/gcp"
 	"github.com/openshift/installer/pkg/types/ibmcloud"
 	"github.com/openshift/installer/pkg/types/libvirt"
@@ -157,24 +158,37 @@ func (a *PlatformQuotaCheck) Generate(dependencies asset.Parents) error {
 			return errors.Wrap(err, "failed to create a new PISession")
 		}
 
-		// Only check that there isn't an existing Cloud connection if we're not re-using one
-		if ic.Config.Platform.PowerVS.CloudConnectionName == "" {
-			err = bxCli.ValidateCloudConnectionInPowerVSRegion(context.TODO(), ic.Config.Platform.PowerVS.ServiceInstanceID)
-			if err != nil {
-				return errors.Wrap(err, "failed to meet the prerequisite for Cloud Connections")
+		client, err := configpowervs.NewClient()
+		if err != nil {
+			return err
+		}
+		err = configpowervs.ValidatePERAvailability(client, ic.Config)
+		transitGatewayEnabled := err == nil
+
+		if !transitGatewayEnabled {
+			// Only check that there isn't an existing Cloud connection if we're not re-using one
+			if ic.Config.Platform.PowerVS.CloudConnectionName == "" {
+				err = bxCli.ValidateCloudConnectionInPowerVSRegion(context.TODO(), ic.Config.Platform.PowerVS.ServiceInstanceID)
+				if err != nil {
+					return fmt.Errorf("failed to meet the prerequisite for Cloud Connections: %w", err)
+				}
 			}
 		}
+
 		err = bxCli.ValidateCapacity(context.TODO(), masters, workers, ic.Config.Platform.PowerVS.ServiceInstanceID)
 		if err != nil {
 			return err
 		}
-		if ic.Config.Platform.PowerVS.PVSNetworkName == "" {
-			err = bxCli.ValidateDhcpService(context.TODO(), ic.Config.Platform.PowerVS.ServiceInstanceID, ic.Config.MachineNetwork)
-			if err != nil {
-				return errors.Wrap(err, "failed to meet the prerequisite of one DHCP service per Power VS instance")
+
+		if !transitGatewayEnabled {
+			if ic.Config.Platform.PowerVS.PVSNetworkName == "" {
+				err = bxCli.ValidateDhcpService(context.TODO(), ic.Config.Platform.PowerVS.ServiceInstanceID, ic.Config.MachineNetwork)
+				if err != nil {
+					return fmt.Errorf("failed to meet the prerequisite of one DHCP service per Power VS instance: %w", err)
+				}
 			}
 		}
-	case alibabacloud.Name, azure.Name, baremetal.Name, ibmcloud.Name, libvirt.Name, none.Name, ovirt.Name, vsphere.Name, nutanix.Name:
+	case alibabacloud.Name, azure.Name, baremetal.Name, ibmcloud.Name, libvirt.Name, external.Name, none.Name, ovirt.Name, vsphere.Name, nutanix.Name:
 		// no special provisioning requirements to check
 	default:
 		err = fmt.Errorf("unknown platform type %q", platform)

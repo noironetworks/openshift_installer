@@ -51,6 +51,7 @@ import (
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	azuredefaults "github.com/openshift/installer/pkg/types/azure/defaults"
 	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
+	externaltypes "github.com/openshift/installer/pkg/types/external"
 	gcptypes "github.com/openshift/installer/pkg/types/gcp"
 	ibmcloudtypes "github.com/openshift/installer/pkg/types/ibmcloud"
 	libvirttypes "github.com/openshift/installer/pkg/types/libvirt"
@@ -201,7 +202,7 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 				return err
 			}
 			for id, subnet := range subnetMeta {
-				subnets[subnet.Zone] = id
+				subnets[subnet.Zone.Name] = id
 			}
 		}
 
@@ -266,11 +267,11 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		}
 		aws.ConfigMasters(machines, controlPlaneMachineSet, clusterID.InfraID, ic.Publish)
 	case gcptypes.Name:
-		mpool := defaultGCPMachinePoolPlatform()
+		mpool := defaultGCPMachinePoolPlatform(pool.Architecture)
 		mpool.Set(ic.Platform.GCP.DefaultMachinePlatform)
 		mpool.Set(pool.Platform.GCP)
 		if len(mpool.Zones) == 0 {
-			azs, err := gcp.AvailabilityZones(ic.Platform.GCP.ProjectID, ic.Platform.GCP.Region)
+			azs, err := gcp.ZonesForInstanceType(ic.Platform.GCP.ProjectID, ic.Platform.GCP.Region, mpool.InstanceType)
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch availability zones")
 			}
@@ -330,7 +331,7 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 
 		imageName, _ := rhcosutils.GenerateOpenStackImageName(string(*rhcosImage), clusterID.InfraID)
 
-		machines, err = openstack.Machines(clusterID.InfraID, ic, &pool, imageName, "master", masterUserDataSecretName)
+		machines, controlPlaneMachineSet, err = openstack.Machines(clusterID.InfraID, ic, &pool, imageName, "master", masterUserDataSecretName)
 		if err != nil {
 			return errors.Wrap(err, "failed to create master machine objects")
 		}
@@ -343,6 +344,9 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 			installConfig.Config.ControlPlane.Architecture,
 		)
 		mpool.OSDisk.DiskSizeGB = 1024
+		if installConfig.Config.Platform.Azure.CloudName == azuretypes.StackCloud {
+			mpool.OSDisk.DiskSizeGB = azuredefaults.AzurestackMinimumDiskSize
+		}
 		mpool.Set(ic.Platform.Azure.DefaultMachinePlatform)
 		mpool.Set(pool.Platform.Azure)
 
@@ -365,6 +369,18 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 			}
 		}
 
+		if mpool.OSImage.Publisher != "" {
+			img, ierr := client.GetMarketplaceImage(context.TODO(), ic.Platform.Azure.Region, mpool.OSImage.Publisher, mpool.OSImage.Offer, mpool.OSImage.SKU, mpool.OSImage.Version)
+			if ierr != nil {
+				return fmt.Errorf("failed to fetch marketplace image: %w", ierr)
+			}
+			// Publisher is case-sensitive and matched against exactly. Also the
+			// Plan's publisher might not be exactly the same as the Image's
+			// publisher
+			if img.Plan != nil && img.Plan.Publisher != nil {
+				mpool.OSImage.Publisher = *img.Plan.Publisher
+			}
+		}
 		pool.Platform.Azure = &mpool
 
 		capabilities, err := client.GetVMCapabilities(context.TODO(), mpool.InstanceType, installConfig.Config.Platform.Azure.Region)
@@ -470,12 +486,14 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		// The other two, we should standardize a name including the cluster id. At this point, all
 		// we have are names.
 		pool.Platform.PowerVS = &mpool
-		machines, err = powervs.Machines(clusterID.InfraID, ic, &pool, "master", "master-user-data")
+		machines, controlPlaneMachineSet, err = powervs.Machines(clusterID.InfraID, ic, &pool, "master", "master-user-data")
 		if err != nil {
 			return errors.Wrap(err, "failed to create master machine objects")
 		}
-		powervs.ConfigMasters(machines, clusterID.InfraID)
-	case nonetypes.Name:
+		if err := powervs.ConfigMasters(machines, controlPlaneMachineSet, clusterID.InfraID, ic.Publish); err != nil {
+			return errors.Wrap(err, "failed to to configure master machine objects")
+		}
+	case externaltypes.Name, nonetypes.Name:
 	case nutanixtypes.Name:
 		mpool := defaultNutanixMachinePoolPlatform()
 		mpool.NumCPUs = 8
@@ -535,6 +553,18 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 			return errors.Wrap(err, "failed to create ignition for Multipath enabled for master machines")
 		}
 		machineConfigs = append(machineConfigs, ignMultipath)
+	}
+	// The maximum number of networks supported on ServiceNetwork is two, one IPv4 and one IPv6 network.
+	// The cluster-network-operator handles the validation of this field.
+	// Reference: https://github.com/openshift/cluster-network-operator/blob/fc3e0e25b4cfa43e14122bdcdd6d7f2585017d75/pkg/network/cluster_config.go#L45-L52
+	if ic.Networking != nil && len(ic.Networking.ServiceNetwork) == 2 &&
+		(ic.Platform.Name() == openstacktypes.Name || ic.Platform.Name() == vspheretypes.Name) {
+		// Only configure kernel args for dual-stack clusters.
+		ignIPv6, err := machineconfig.ForDualStackAddresses("master")
+		if err != nil {
+			return errors.Wrap(err, "failed to create ignition to configure IPv6 for master machines")
+		}
+		machineConfigs = append(machineConfigs, ignIPv6)
 	}
 
 	m.MachineConfigFiles, err = machineconfig.Manifests(machineConfigs, "master", directory)

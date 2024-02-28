@@ -1,16 +1,9 @@
 locals {
-  labels = merge(
-    {
-      "kubernetes-io-cluster-${var.cluster_id}" = "owned"
-    },
-    var.gcp_extra_labels,
-  )
-
   master_subnet_cidr = cidrsubnet(var.machine_v4_cidrs[0], 1, 0) #master subnet is a smaller subnet within the vnet. e.g., from /21 to /22
   worker_subnet_cidr = cidrsubnet(var.machine_v4_cidrs[0], 1, 1) #worker subnet is a smaller subnet within the vnet. e.g., from /21 to /22
   public_endpoints   = var.gcp_publish_strategy == "External" ? true : false
 
-  gcp_image   = var.gcp_preexisting_image ? var.gcp_image : google_compute_image.cluster[0].self_link
+  gcp_image   = var.gcp_image
   description = "Created By OpenShift Installer"
 }
 
@@ -41,9 +34,9 @@ module "master" {
 
   confidential_compute = var.gcp_master_confidential_compute
   on_host_maintenance  = var.gcp_master_on_host_maintenance
+  gcp_extra_labels     = var.gcp_extra_labels
 
-  tags   = var.gcp_control_plane_tags
-  labels = local.labels
+  tags = var.gcp_control_plane_tags
 }
 
 module "iam" {
@@ -84,25 +77,7 @@ module "dns" {
   api_external_lb_ip = module.network.cluster_public_ip
   api_internal_lb_ip = module.network.cluster_ip
   public_endpoints   = local.public_endpoints
+  project_id         = var.gcp_project_id
+  gcp_extra_labels   = var.gcp_extra_labels
 }
 
-resource "google_compute_image" "cluster" {
-  count       = var.gcp_preexisting_image ? 0 : 1
-  description = local.description
-
-  name = "${var.cluster_id}-rhcos-image"
-
-  # See https://github.com/openshift/installer/issues/2546
-  guest_os_features {
-    type = "SECURE_BOOT"
-  }
-  guest_os_features {
-    type = "UEFI_COMPATIBLE"
-  }
-
-  raw_disk {
-    source = var.gcp_image_uri
-  }
-
-  licenses = var.gcp_image_licenses
-}

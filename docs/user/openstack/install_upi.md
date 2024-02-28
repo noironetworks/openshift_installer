@@ -63,7 +63,9 @@ of this method of installation.
 ## Prerequisites
 
 The file `inventory.yaml` contains the variables most likely to need customization.
-**NOTE**: some of the default pods (e.g. the `openshift-router`) require at least two nodes so that is the effective minimum.
+
+> **Note**
+> Some of the default pods (e.g. the `openshift-router`) require at least two nodes so that is the effective minimum.
 
 The requirements for UPI are broadly similar to the [ones for OpenStack IPI][ipi-reqs]:
 
@@ -102,7 +104,7 @@ This repository contains [Ansible playbooks][ansible-upi] to deploy OpenShift on
 They can be downloaded from Github with this script:
 
 ```sh
-RELEASE="release-4.6"; xargs -n 1 curl -O <<< "
+RELEASE="release-4.14"; xargs -n 1 curl -O <<< "
         https://raw.githubusercontent.com/openshift/installer/${RELEASE}/upi/openstack/bootstrap.yaml
         https://raw.githubusercontent.com/openshift/installer/${RELEASE}/upi/openstack/common.yaml
         https://raw.githubusercontent.com/openshift/installer/${RELEASE}/upi/openstack/compute-nodes.yaml
@@ -119,38 +121,38 @@ RELEASE="release-4.6"; xargs -n 1 curl -O <<< "
         https://raw.githubusercontent.com/openshift/installer/${RELEASE}/upi/openstack/security-groups.yaml"
 ```
 
-For installing a different version, change the branch (`release-4.6`)
-accordingly (e.g. `release-4.7`). Note that `down-containers.yaml` was only
-introduced in `release-4.6`.
+For installing a different version, change the branch (`release-4.14`)
+accordingly (e.g. `release-4.12`).
 
 **Requirements:**
 
-* Python
-* Ansible
+* Python (>=3.8 for ansible-core, currently tested by CI or lower if using Ansible 2.9)
+* Ansible (>=2.10 is currently tested by CI, 2.9 is EOL soon)
 * Python modules required in the playbooks. Namely:
   * openstackclient
   * openstacksdk
   * netaddr
+* Ansible collections required in the playbooks. Namely:
+  * openstack.cloud
+  * ansible.utils
+  * community.general
 
 ### RHEL
 
-From a RHEL 8 box, make sure that the repository origins are all set:
+From a RHEL box, make sure that the repository origins are all set:
 
 ```sh
 sudo subscription-manager register # if not done already
 sudo subscription-manager attach --pool=$YOUR_POOLID # if not done already
 sudo subscription-manager repos --disable=* # if not done already
-
 sudo subscription-manager repos \
-  --enable=rhel-8-for-x86_64-baseos-rpms \
-  --enable=openstack-16-tools-for-rhel-8-x86_64-rpms \
-  --enable=ansible-2.9-for-rhel-8-x86_64-rpms \
-  --enable=rhel-8-for-x86_64-appstream-rpms
+  --enable=rhel-8-for-x86_64-baseos-rpms \ # change RHEL version if needed
+  --enable=rhel-8-for-x86_64-appstream-rpms # change RHEL version if needed
 ```
 
-Then install the packages:
+Then install the package:
 ```sh
-sudo dnf install python3-openstackclient ansible python3-openstacksdk python3-netaddr
+sudo dnf install ansible-core
 ```
 
 Make sure that `python` points to Python3:
@@ -158,15 +160,30 @@ Make sure that `python` points to Python3:
 sudo alternatives --set python /usr/bin/python3
 ```
 
+To avoid packages not found or mismatchs, we use pip to install the dependencies:
+```sh
+python3 -m pip install --upgrade pip
+python3 -m pip install yq openstackclient openstacksdk netaddr
+```
+
 ### Fedora
 
 This command installs all required dependencies on Fedora:
 
 ```sh
-sudo dnf install python3-openstackclient ansible python3-openstacksdk python3-netaddr
+sudo dnf install python3-openstackclient ansible-core python3-openstacksdk python3-netaddr
 ```
 
 [ansible-upi]: ../../../upi/openstack "Ansible Playbooks for Openstack UPI"
+
+## Ansible Collections
+
+The Ansible Collections are not packaged (yet) on recent versions of OSP and RHEL when `ansible-core` is
+installed instead of Ansible 2.9. So the collections need to be installed from `ansible-galaxy`.
+
+```sh
+ansible-galaxy collection install openstack.cloud ansible.utils community.general
+```
 
 ## OpenShift Configuration Directory
 
@@ -201,7 +218,8 @@ $ gunzip rhcos-${RHCOSVERSION}-openstack.x86_64.qcow2.gz
 
 Next step is to create a Glance image.
 
-**NOTE:** *This document* will use `rhcos-${CLUSTER_NAME}` as the Glance image name. The name of the Glance image must be the one configured as `os_image_rhcos` in `inventory.yaml`.
+> **Note**
+> This document will use `rhcos-${CLUSTER_NAME}` as the Glance image name. The name of the Glance image must be the one configured as `os_image_rhcos` in `inventory.yaml`.
 
 <!--- e2e-openstack-upi: INCLUDE START --->
 ```sh
@@ -209,7 +227,9 @@ $ openstack image create --container-format=bare --disk-format=qcow2 --file rhco
 ```
 <!--- e2e-openstack-upi: INCLUDE END --->
 
-**NOTE:** Depending on your OpenStack environment you can upload the RHCOS image as `raw` or `qcow2`. See [Disk and container formats for images](https://docs.openstack.org/image-guide/introduction.html#disk-and-container-formats-for-images) for more information.
+> **Note**
+> Depending on your OpenStack environment you can upload the RHCOS image as `raw` or `qcow2`.
+> See [Disk and container formats for images](https://docs.openstack.org/image-guide/introduction.html#disk-and-container-formats-for-images) for more information.
 
 [qemu_guest_agent]: https://docs.openstack.org/nova/latest/admin/configuration/hypervisor-kvm.html
 If the RHCOS image being used supports it,  the [KVM Qemu Guest Agent][qemu_guest_agent] may be used to enable optional
@@ -234,7 +254,11 @@ $ openstack image show "rhcos-${CLUSTER_NAME}"
 
 If the variables `os_api_fip`, `os_ingress_fip` and `os_bootstrap_fip` are found in `inventory.yaml`, the corresponding floating IPs will be attached to the API load balancer, to the worker nodes load balancer and to the temporary machine used for the install process, respectively. Note that `os_external_network` is a requirement for those.
 
-**NOTE**: throughout this document, we will use `203.0.113.23` as the public IP address for the OpenShift API endpoint and `203.0.113.19` as the public IP for the ingress (`*.apps`) endpoint. `203.0.113.20` will be the public IP used for the bootstrap machine.
+> **Note**
+> Throughout this document, we will use `203.0.113.23` as the public IP address
+> for the OpenShift API endpoint and `203.0.113.19` as the public IP for the
+> ingress (`*.apps`) endpoint. `203.0.113.20` will be the public IP used for
+> the bootstrap machine.
 
 ```sh
 $ openstack floating ip create --description "OpenShift API" <external>
@@ -359,8 +383,9 @@ if "ingressVIP" in data["platform"]["openstack"]:
 open(path, "w").write(yaml.dump(data, default_flow_style=False))'
 ```
 
-**NOTE**: All the scripts in this guide work with Python 3 as well as Python 2. You can also choose to edit the
-`install-config.yaml` file by hand.
+> **Note**
+> All the scripts in this guide work with Python 3 as well as Python 2.
+> You can also choose to edit the `install-config.yaml` file by hand.
 
 ### Empty Compute Pools
 
@@ -451,10 +476,10 @@ $ tree
 ### Remove Machines and MachineSets
 
 Remove the control-plane Machines and compute MachineSets, because we'll be providing those ourselves and don't want to involve the
-[machine-API operator][mao]:
+[machine-API operator][mao] and [cluster-control-plane-machine-set operator][ccpmso]:
 <!--- e2e-openstack-upi: INCLUDE START --->
 ```sh
-$ rm -f openshift/99_openshift-cluster-api_master-machines-*.yaml openshift/99_openshift-cluster-api_worker-machineset-*.yaml
+$ rm -f openshift/99_openshift-cluster-api_master-machines-*.yaml openshift/99_openshift-cluster-api_worker-machineset-*.yaml openshift/99_openshift-machine-api_master-control-plane-machine-set.yaml
 ```
 <!--- e2e-openstack-upi: INCLUDE END --->
 Leave the compute MachineSets in if you want to create compute machines via the machine API. However, some references must be updated in the machineset spec (`openshift/99_openshift-cluster-api_worker-machineset-0.yaml`) to match your environment:
@@ -462,6 +487,7 @@ Leave the compute MachineSets in if you want to create compute machines via the 
 * The OS image: `spec.template.spec.providerSpec.value.image`
 
 [mao]: https://github.com/openshift/machine-api-operator
+[ccpmso]: https://github.com/openshift/cluster-control-plane-machine-set-operator
 
 ### Make control-plane nodes unschedulable
 
@@ -540,7 +566,8 @@ openshift-qlvwv-bootstrap
 
 **`/opt/openshift/tls/cloud-ca-cert.pem`** (if applicable).
 
-**NOTE**: We recommend you back up the Ignition files before making any changes!
+> **Note**
+> We recommend you back up the Ignition files before making any changes!
 
 You can edit the Ignition file manually or run this Python script:
 
@@ -626,7 +653,8 @@ $ openstack image create --disk-format=raw --container-format=bare --file bootst
 ```
 <!--- e2e-openstack-upi: INCLUDE END --->
 
-**NOTE**: Make sure the created image has `active` status.
+> **Note**
+> Make sure the created image has `active` status.
 
 Copy and save `file` value of the output, it should look like `/v2/images/<image_id>/file`.
 
@@ -787,7 +815,8 @@ If you look inside, you will see that they contain very little. In fact, most of
 
 You can make your own changes here.
 
-**NOTE**: The worker nodes do not require any changes to their Ignition, but you can make your own by editing `worker.ign`.
+> **Note**
+> The worker nodes do not require any changes to their Ignition, but you can make your own by editing `worker.ign`.
 
 ## Network Topology
 
@@ -816,7 +845,8 @@ Outside connectivity will be provided by attaching the floating IP addresses (IP
 
 ### Subnet DNS (optional)
 
-**NOTE**: This step is optional and only necessary if you want to control the default resolvers your Nova servers will use.
+> **Note**
+> This step is optional and only necessary if you want to control the default resolvers your Nova servers will use.
 
 During deployment, the OpenShift nodes will need to be able to resolve public name records to download the OpenShift images and so on. They will also need to resolve the OpenStack API endpoint.
 
@@ -912,7 +942,8 @@ $ oc get nodes
 $ oc get pods -A
 ```
 
-**NOTE**: Only the API will be up at this point. The OpenShift UI will run on the compute nodes.
+> **Note**
+> Only the API will be up at this point. The OpenShift UI will run on the compute nodes.
 
 ### Delete the Bootstrap Resources
 <!--- e2e-openstack-upi: INCLUDE START --->
@@ -1085,8 +1116,9 @@ $ ansible-playbook -i inventory.yaml  \
 
 The playbook `down-load-balancers.yaml` idempotently deletes the load balancers created by the Kuryr installation, if any.
 
-**NOTE:** The deletion of load balancers with `provisioning_status` `PENDING-*` is skipped. Make sure to retry the
-`down-load-balancers.yaml` playbook once the load balancers have transitioned to `ACTIVE`.
+> **Note**
+> The deletion of load balancers with `provisioning_status` `PENDING-*` is skipped.
+> Make sure to retry the `down-load-balancers.yaml` playbook once the load balancers have transitioned to `ACTIVE`.
 
 Delete the RHCOS image if it's no longer useful.
 

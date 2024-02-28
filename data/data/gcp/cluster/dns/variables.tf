@@ -38,3 +38,13 @@ variable "public_endpoints" {
   description = "If the cluster should have externally accessible resources."
 }
 
+variable "project_id" {
+  type        = string
+  description = "The target GCP project for the cluster."
+}
+
+variable "gcp_extra_labels" {
+  type        = map(string)
+  description = "GCP labels to be applied to created resources."
+  default     = {}
+}
