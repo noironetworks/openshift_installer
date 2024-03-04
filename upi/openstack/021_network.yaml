@@ -80,8 +80,8 @@
       network_name: "{{ os_aci_containers_network }}"
       no_gateway_ip: yes
       cidr: "{{ aci_cni['network_interfaces']['opflex']['subnet'] }}"
-      allocation_pool_start: "{{ aci_cni['network_interfaces']['opflex']['subnet'] | next_nth_usable(10) }}"
-      allocation_pool_end: "{{ aci_cni['network_interfaces']['opflex']['subnet'] | ipaddr('last_usable') }}"
+      allocation_pool_start: "{{ aci_cni['network_interfaces']['opflex']['subnet'] | ansible.utils.next_nth_usable(10) }}"
+      allocation_pool_end: "{{ aci_cni['network_interfaces']['opflex']['subnet'] | ansible.utils.ipaddr('last_usable') }}"
     when:
       - os_networking_type == "CiscoACI"
       - containers_subnet.stdout == ""
