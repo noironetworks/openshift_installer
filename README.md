@@ -7,7 +7,7 @@ OpenShift Install Guides
 ### Cisco Published Docs
 * [Installing OpenShift 4.13 on Bare Metal](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-baremetal/installing-openshift-4-13-on-baremetal.html)
 * [Installing OpenShift 4.12 on Bare Metal](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-baremetal/installing-openshift-4-12-on-baremetal.html)
-* [Installing OpenShift 4.11 on Bare Metal Server](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-baremetal/installing-openshift-4-11-on-baremetal.html)
+* [Installing OpenShift 4.11 on Bare Metal](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-baremetal/installing-openshift-4-11-on-baremetal.html)
 * [Installing OpenShift 4.10 on Bare Metal](https://www.cisco.com/content/en/us/td/docs/dcn/aci/containers/installation/installing-openshift-4-10-on-baremetal.html) 
 * [Installing OpenShift 4.9 on Bare Metal](https://www.cisco.com/content/en/us/td/docs/dcn/aci/containers/installation/installing-openshift-4-9-on-baremetal.html)
 * [Installing OpenShift 4.8 on Bare Metal](https://www.cisco.com/content/en/us/td/docs/dcn/aci/containers/installation/installing-openshift-4-8-on-baremetal.html)
