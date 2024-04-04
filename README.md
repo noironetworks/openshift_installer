@@ -22,6 +22,7 @@ OpenShift Install Guides
 * [OpenShift 4.7 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-openshift-4-7-on-vmware-vsphere.html)
 * [OpenShift 4.6 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/installing-openshift-4dot6-on-vmware-vsphere.html)
 * [OpenShift 4.5 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/installing-openshift-4dot5-on-vmware-vsphere.html)
+* [OpenShift 4.14 on OpenStack 16.2](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-14-on-openstack-16-2.html)
 * [OpenShift 4.13 on OpenStack 16.2](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-13-on-openstack-16-2.html)
 * [OpenShift 4.12 on OpenStack 16.2](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-12-on-openstack-16-2.html)
 * [OpenShift 4.11 on OpenStack 16.2](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-11-on-openstack-16-2.html)
