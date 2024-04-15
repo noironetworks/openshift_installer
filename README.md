@@ -5,6 +5,8 @@ OpenShift Install Guides
 * [OpenShift 4.14 Agent-based Installation on VMware vSphere](docs/installers/agent-based-openshift-4-14-on-vmware-vsphere.md)
 
 ### Cisco Published Docs
+* [OpenShift 4.14 Agent-based Installation on Bare Metal](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-baremetal/installing-agent-based-openshift-4-14-on-baremetal.html)
+* [OpenShift 4.14 Agent-based Installation on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-agent-based-openshift-4-14-vmware-vsphere.html)
 * [OpenShift 4.13 on a Bare Metal Server](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-baremetal/installing-openshift-4-13-on-baremetal.html)
 * [OpenShift 4.12 on a Bare Metal Server](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-baremetal/installing-openshift-4-12-on-baremetal.html)
 * [OpenShift 4.11 on a Bare Metal Server](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-baremetal/installing-openshift-4-11-on-baremetal.html)
