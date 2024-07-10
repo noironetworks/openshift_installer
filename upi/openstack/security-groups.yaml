@@ -31,6 +31,34 @@
       security_group: "{{ os_sg_master }}"
       protocol: icmp
 
+  - name: 'Create master-sg rule for all TCP ports'
+    openstack.cloud.security_group_rule:
+      security_group: "{{ os_sg_master }}"
+      protocol: tcp
+      remote_ip_prefix: "{{ cluster_network_cidrs }}"
+    when: os_networking_type == "CiscoACI"
+
+  - name: 'Create master-sg rule for all UDP ports'
+    openstack.cloud.security_group_rule:
+      security_group: "{{ os_sg_master }}"
+      protocol: udp
+      remote_ip_prefix: "{{ cluster_network_cidrs }}"
+    when: os_networking_type == "CiscoACI"
+
+  - name: 'Create worker-sg rule for all TCP ports'
+    openstack.cloud.security_group_rule:
+      security_group: "{{ os_sg_worker }}"
+      protocol: tcp
+      remote_ip_prefix: "{{ cluster_network_cidrs }}"
+    when: os_networking_type == "CiscoACI"
+
+  - name: 'Create worker-sg rule for all UDP ports'
+    openstack.cloud.security_group_rule:
+      security_group: "{{ os_sg_worker }}"
+      protocol: udp
+      remote_ip_prefix: "{{ cluster_network_cidrs }}"
+    when: os_networking_type == "CiscoACI"
+
   - name: 'Create master-sg rule "machine config server"'
     openstack.cloud.security_group_rule:
       security_group: "{{ os_sg_master }}"
@@ -162,7 +190,7 @@
     openstack.cloud.security_group_rule:
       security_group: "{{ os_sg_master }}"
       protocol: tcp
-      remote_ip_prefix: "{{ os_subnet_range }}"
+      remote_ip_prefix: "0.0.0.0/0"
       port_range_min: 30000
       port_range_max: 32767
 
@@ -170,7 +198,7 @@
     openstack.cloud.security_group_rule:
       security_group: "{{ os_sg_master }}"
       protocol: udp
-      remote_ip_prefix: "{{ os_subnet_range }}"
+      remote_ip_prefix: "0.0.0.0/0"
       port_range_min: 30000
       port_range_max: 32767
 
@@ -217,6 +245,23 @@
       remote_ip_prefix: "{{ os_subnet_range }}"
       port_range_min: 22
       port_range_max: 22
+
+  - name: 'Create worker-sg rule "mDNS"'
+    openstack.cloud.security_group_rule:
+      security_group: "{{ os_sg_worker }}"
+      protocol: udp
+      remote_ip_prefix: "{{ os_subnet_range }}"
+      port_range_min: 5353
+      port_range_max: 5353
+
+  - name: 'Create worker-sg rule "DNS (UDP)"'
+    openstack.cloud.security_group_rule:
+      security_group: "{{ os_sg_worker }}"
+      remote_ip_prefix: "{{ cluster_network_cidrs }}"
+      protocol: udp
+      port_range_min: 53
+      port_range_max: 53
+    when: os_networking_type == "CiscoACI"
 
   - name: 'Create worker-sg rule "Ingress HTTP"'
     openstack.cloud.security_group_rule:
@@ -300,7 +345,7 @@
     openstack.cloud.security_group_rule:
       security_group: "{{ os_sg_worker }}"
       protocol: tcp
-      remote_ip_prefix: "{{ os_subnet_range }}"
+      remote_ip_prefix: "0.0.0.0/0"
       port_range_min: 30000
       port_range_max: 32767
 
@@ -308,7 +353,7 @@
     openstack.cloud.security_group_rule:
       security_group: "{{ os_sg_worker }}"
       protocol: udp
-      remote_ip_prefix: "{{ os_subnet_range }}"
+      remote_ip_prefix: "0.0.0.0/0"
       port_range_min: 30000
       port_range_max: 32767
 
