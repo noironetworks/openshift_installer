@@ -1,0 +1,71 @@
+# Required Python packages:
+#
+# ansible
+# openstackclient
+# openstacksdk
+# netaddr
+
+- import_playbook: common.yaml
+
+- hosts: all
+  gather_facts: no
+
+  tasks:
+  - name: wait for apiserver to be up
+    wait_for:
+       host={{ os_api_fip }}
+       port=6443
+       delay=5
+       timeout=3600
+
+  - name: Fetch the name of worker machineset
+    shell: >
+     oc get machineset --kubeconfig {{ aci_cni['kubeconfig'] }} -n openshift-machine-api | grep -m 1 worker | awk '{print $1}'
+    register: mcset
+    retries: 100
+    delay: 20
+    until: mcset.stdout != ""
+
+  - debug:
+      msg: "{{ mcset.stdout }}"
+
+  - name: check machineset availability
+    k8s_info:
+      kubeconfig: "{{ aci_cni['kubeconfig'] }}"
+      kind: MachineSet
+      namespace: openshift-machine-api
+      api_version: machine.openshift.io/v1beta1
+      name: "{{ mcset.stdout }}"
+    register: node_status
+    until: node_status.resources|length > 0
+    retries: 100
+    delay: 20
+
+  - debug:
+      msg: "{{ node_status }}"
+
+  - name: 'Extract Primary Network ID'
+    ansible.builtin.command:
+      cmd: "openstack network list --name {{ os_network }} -f value -c ID"
+    register: nodes_network_uuid
+
+  - name: 'Extract Primary Subnet ID'
+    ansible.builtin.command:
+      cmd: "openstack network list --name {{ os_network }} -f value -c Subnets"
+    register: nodes_subnet_uuid
+
+  - name: 'Extract Secondary Network ID'
+    ansible.builtin.command:
+      cmd: "openstack network list --name {{ os_aci_containers_network }} -f value -c ID"
+    register: acicontainers_nodes_network_uuid
+
+  - name: 'Extract Secondary Subnet ID'
+    ansible.builtin.command:
+      cmd: "openstack network list --name {{ os_aci_containers_network }} -f value -c Subnets"
+    register: acicontainers_nodes_subnet_uuid
+
+  - name: update machineset
+    k8s:
+      kubeconfig: "{{ aci_cni['kubeconfig'] }}"
+      state: present
+      definition: "{{ lookup('template', 'machineset.yml.j2')}}"
