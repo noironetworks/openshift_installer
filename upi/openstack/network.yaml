@@ -5,6 +5,8 @@
 # openstacksdk
 # netaddr
 
+- import_playbook: common.yaml
+
 - hosts: all
   gather_facts: no
 
@@ -12,25 +14,127 @@
   - name: 'Create the cluster network'
     openstack.cloud.network:
       name: "{{ os_network }}"
+    when: os_networking_type != "CiscoACI"
 
-  - name: 'Create the cluster IPv4 subnet'
-    openstack.cloud.subnet:
+  - name: 'list network'
+    command:
+      cmd: "openstack network list --name {{ os_network }} --tag {{ cluster_id_tag }}"
+    when: os_networking_type == "CiscoACI"
+    register: cluster_network
+
+  - name: 'get network epg contract masters attributes'
+    command:
+      cmd: "neutron net-show {{ os_network }} -f json -c apic:epg_contract_masters"
+    when:
+      - os_networking_type == "CiscoACI"
+      - cluster_network.stdout != ""
+    register: epg_bd
+
+  - name: 'convert network show output into dictionary type'
+    set_fact:
+         epg_bd_out: "{{ epg_bd.stdout| from_json }}"
+    when:
+      - os_networking_type == "CiscoACI"
+      - cluster_network.stdout != ""
+      - epg_bd.stdout != ""
+
+  - name: 'set facts for network epg contract masters attributes'
+    set_fact:
+         app_profile_name: "{{ epg_bd_out['apic:epg_contract_masters'].0.app_profile_name }}"
+         node_epg: "{{ epg_bd_out['apic:epg_contract_masters'].0.name }}"
+    when:
+      - os_networking_type == "CiscoACI"
+      - cluster_network.stdout != ""
+      - epg_bd_out is defined
+
+  - name: 'Create the cluster network with aci-containers-nodes EPG contract relationship for node network'
+    command:
+      cmd: "neutron net-create {{ os_network }} --apic:epg_contract_masters list=true type=dict app_profile_name={{ aci_cni['app_profile'] }},name={{ aci_cni['node_epg'] }} --apic:distinguished_names type=dict BridgeDomain={{ aci_cni['network_interfaces']['node']['bd'] }}"
+    when:
+      - os_networking_type == "CiscoACI"
+      - (cluster_network.stdout == "" ) or
+        (app_profile_name is defined and app_profile_name != aci_cni['app_profile']) or
+        (node_epg is defined and node_epg != aci_cni['node_epg'])
+
+  - name: 'Create a subnet'
+    os_subnet:
       name: "{{ os_subnet }}"
       network_name: "{{ os_network }}"
       cidr: "{{ os_subnet_range }}"
       allocation_pool_start: "{{ os_subnet_range | ansible.utils.next_nth_usable(10) }}"
       allocation_pool_end: "{{ os_subnet_range | ansible.utils.ipaddr('last_usable') }}"
       dns_nameservers: "{{ os_external_dns }}"
+    when: os_networking_type != "CiscoACI"
 
-  - name: 'Create the cluster IPv6 subnet'
-    openstack.cloud.subnet:
-      name: "{{ os_subnet6 }}"
-      network_name: "{{ os_network }}"
-      cidr: "{{ os_subnet6_range }}"
-      ip_version: 6
-      ipv6_address_mode: "{{ os_subnet6_address_mode }}"
-      ipv6_ra_mode: "{{ os_subnet6_router_advertisements_mode }}"
-    when: os_subnet6 is defined
+  - name: 'List the cluster address-scope'
+    command:
+      cmd: "openstack address scope list --name node_network_address_scope"
+    when: os_networking_type == "CiscoACI"
+    register: cluster_address_scope
+
+  - name: 'Create the cluster address-scope'
+    command:
+      cmd: "neutron address-scope-create node_network_address_scope 4 --apic:distinguished_names type=dict VRF={{ aci_cni['network_interfaces']['node']['vrf'] }}"
+    when:
+      - os_networking_type == "CiscoACI"
+      - cluster_address_scope.stdout == ""
+
+  - name: 'list subnet pool'
+    command:
+      cmd: "openstack subnet pool list --name node_network_subnet_pool -f value -c Prefixes"
+    when: os_networking_type == "CiscoACI"
+    register: primary_subnet_pool
+
+  - name: 'Check if subnetpool already exists with different subnet range.'
+    assert:
+      that:
+        - os_subnet_range in primary_subnet_pool.stdout
+      fail_msg: "node_network_subnet_pool already exists with different subnet range."
+    when:
+      - os_networking_type == "CiscoACI"
+      - primary_subnet_pool.stdout != ""
+
+  - name: 'Create the subnetpool'
+    command:
+      cmd: "neutron subnetpool-create --pool-prefix {{ os_subnet_range }} --address-scope node_network_address_scope node_network_subnet_pool"
+    when:
+      - os_networking_type == "CiscoACI"
+      - primary_subnet_pool.stdout == ""
+
+  - name: 'list primary subnet'
+    command:
+      cmd: "openstack subnet list --name {{ os_subnet }} --network {{ os_network }} --tag {{ cluster_id_tag }}"
+    when: os_networking_type == "CiscoACI"
+    register: primary_cluster_subnet
+
+  - name: 'get cidr of primary subnet'
+    command:
+      cmd: "openstack subnet list --name {{ os_subnet }} --network {{ os_network }} --tag {{ cluster_id_tag }} -f value -c Subnet"
+    when:
+      - os_networking_type == "CiscoACI"
+      - primary_cluster_subnet.stdout != ""
+    register: primary_subnet_cidr
+
+  - name: 'Check if primary cluster subnet already exists with different subnet range.'
+    assert:
+      that:
+        - os_subnet_range in primary_subnet_cidr.stdout_lines|list
+      fail_msg: "{{ os_subnet }} already exists with different subnet range."
+    when:
+      - os_networking_type == "CiscoACI"
+      - primary_cluster_subnet.stdout != ""
+
+  - name: 'Create the primary cluster subnet'
+    command:
+      cmd: "openstack subnet create --network {{ os_network }}  --subnet-pool node_network_subnet_pool --subnet-range {{ os_subnet_range }} --allocation-pool start={{ os_subnet_range | next_nth_usable(10) }},end={{ os_subnet_range | ipaddr('last_usable') }} --dhcp {{ os_subnet }}"
+    when:
+      - os_networking_type == "CiscoACI"
+      - primary_cluster_subnet.stdout == ""
+
+  - name: 'list external router'
+    command:
+      cmd: "openstack router list --name {{ os_router }}"
+    register: ext_router_list
 
   - name: 'Create external router for IPv4'
     openstack.cloud.router:
@@ -48,6 +152,15 @@
       network: "{{ os_external_network }}"
       interfaces:
       - "{{ os_subnet }}"
+    when:
+      - os_external_network is defined and os_external_network|length>0
+      - ext_router_list.stdout == ""
+
+  - name: 'Add IPv6 subnet to the external router'
+    openstack.cloud.router:
+      name: "{{ os_router }}"
+      interfaces:
+      - "{{ os_subnet }}"
       - "{{ os_subnet6 }}"
     when:
     - os_external_network is defined
@@ -58,6 +171,8 @@
     openstack.cloud.port:
       name: "{{ os_port_api }}"
       network: "{{ os_network }}"
+      security_groups:
+      - "{{ os_sg_master }}"
       fixed_ips:
       - subnet: "{{ os_subnet }}"
         ip_address: "{{ os_apiVIP }}"
@@ -79,10 +194,17 @@
       api_ports: "{{ _api_ports }}"
     when: _api_ports.changed
 
+  - name: 'Get Ingress port'
+    command:
+      cmd: "openstack port list --tags {{ os_port_ingress }}"
+    register: ingress_port
+
   - name: 'Create the Ingress port'
     openstack.cloud.port:
       name: "{{ os_port_ingress }}"
       network: "{{ os_network }}"
+      security_groups:
+      - "{{ os_sg_worker }}"
       fixed_ips:
       - subnet: "{{ os_subnet }}"
         ip_address: "{{ os_ingressVIP }}"
@@ -103,6 +225,25 @@
   - set_fact:
       ingress_ports: "{{ _ingress_ports }}"
     when: _ingress_ports.changed
+
+  - name: 'Set MTU for the node network'
+    command:
+      cmd: "openstack network set {{ os_network }} --mtu {{ aci_cni['network_interfaces']['node']['mtu'] }}"
+    when: os_networking_type == "CiscoACI"
+
+  - name: 'Get dns nameserver'
+    command:
+      cmd: "openstack subnet  show {{ os_subnet }} -c dns_nameservers -f value"
+    register: dns_nameserver_list
+
+  - name: 'Set dns nameserver'
+    command:
+      cmd: "openstack subnet set --dns-nameserver {{ item }} {{ os_subnet }}"
+    when:
+      - os_networking_type == "CiscoACI"
+      - aci_cni.dns_ips is defined and aci_cni.dns_ips | length > 0
+      - item not in dns_nameserver_list.stdout
+    with_items: "{{ aci_cni.dns_ips }}"
 
   - name: 'Populate inventory with API addresses'
     shell: |
@@ -141,3 +282,4 @@
     when:
     - ingress_ports.port is defined
     loop: "{{ ingress_ports.port.fixed_ips }}"
+
