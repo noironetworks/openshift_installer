@@ -1,0 +1,42 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: 02-master-network
+spec:
+  config:
+    ignition:
+      config: {}
+      security:
+        tls: {}
+      timeouts: {}
+      version: 3.1.0
+    networkd: {}
+    passwd: {}
+    storage:
+      files:
+      - contents:
+          source: data:text/plain;charset=utf-8;base64,{{ ifcfg_ens3.base64 }}
+          verification: {}
+        path: {{ ifcfg_ens3.path }}
+        mode: 420
+        filesystem: root
+      - contents:
+          source: data:text/plain;charset=utf-8;base64,{{ ifcfg_ens4.base64 }}
+          verification: {}
+        path: {{ ifcfg_ens4.path }}
+        mode: 420
+        filesystem: root
+      - contents:
+          source: data:text/plain;charset=utf-8;base64,{{ ifcfg_opflex_conn.base64 }}
+          verification: {}
+        path: {{ ifcfg_opflex_conn.path }}
+        mode: 420
+        filesystem: root
+      - contents:
+          source: data:text/plain;charset=utf-8;base64,{{ route_opflex_conn.base64 }}
+          verification: {}
+        path: {{ route_opflex_conn.path }}
+        mode: 420
+        filesystem: root
