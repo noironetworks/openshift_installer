@@ -54,3 +54,30 @@
     ansible.builtin.command:
       cmd: "openstack network delete {{ networks.stdout_lines | join(' ') }}"
     when: networks.stdout != ""
+
+  - name: 'List the cluster subnet pool'
+    ansible.builtin.command:
+      cmd: "openstack subnet pool list --name node_network_subnet_pool"
+    when: os_networking_type == "CiscoACI"
+    register: cisco_subnet_pool
+
+  - name: 'Remove the cluster subnet pool'
+    ansible.builtin.command:
+      cmd: "openstack subnet pool delete node_network_subnet_pool"
+    when:
+      - os_networking_type == "CiscoACI"
+      - cisco_subnet_pool.stdout != ""
+
+  - name: 'List the cluster address-scope'
+    ansible.builtin.command:
+      cmd: "openstack address scope list --name node_network_address_scope"
+    when: os_networking_type == "CiscoACI"
+    register: cisco_cluster_address_scope
+
+  - name: 'Remove the cluster address-scope'
+    ansible.builtin.command:
+      cmd: "openstack address scope delete node_network_address_scope"
+    when:
+      - os_networking_type == "CiscoACI"
+      - cisco_cluster_address_scope.stdout != ""
+
