@@ -97,3 +97,30 @@ all:
       # An IPv6 address that will be assigned to the ingress VIP.
       # This value will be overwritten by the network.yaml playbook.
       os_ingressVIP6: ""
+      cluster_network_cidrs: 15.128.0.0/16
+      os_networking_type: 'CiscoACI'
+      aci_cni:
+        # This section has ACI CNI specific configuration.
+        # In case of optional configuration, the default
+        # values are populated after running update_ign.py.
+        # Those default values are mentioned here.
+        acc_provision_tar: /path/aci_deployment.yaml1.tar.gz
+        kubeconfig: /path/kubeconfig
+        network_interfaces:
+          node:
+            name: ens3 # Optional
+            mtu: 1500 # Optional
+            bd: uni/tn-prj_<openstack-prj-id>/BD-aci-containers-<system-id>-node-bd # Derived
+            vrf: uni/tn-<vrf-tenant>/ctx-<vrf-name> # Derived
+          opflex:
+            mtu: 1500 # Optional
+            name: ens4 # Optional
+            subnet: 192.168.208.0/20 # Optional
+        cluster_snat_policy_ip: <IP> # Optional, no default value
+        dns_ips: [<list of dns ip's>] # Optional, no default value
+        # The following are derived from acc_provision_tar file
+        # and populated after running the update_ign.py
+        app_profile: aci-containers-<system-id> # Derived
+        node_epg: aci-containers-nodes # Derived
+        infra_vlan: 4093 # Derived
+        service_vlan: 1033 # Derived
