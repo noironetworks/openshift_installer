@@ -56,8 +56,8 @@
         (app_profile_name is defined and app_profile_name != aci_cni['app_profile']) or
         (node_epg is defined and node_epg != aci_cni['node_epg'])
 
-  - name: 'Create a subnet'
-    os_subnet:
+  - name: 'Create the cluster IPv4 subnet'
+    openstack.cloud.subnet:
       name: "{{ os_subnet }}"
       network_name: "{{ os_network }}"
       cidr: "{{ os_subnet_range }}"
