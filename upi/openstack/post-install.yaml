@@ -1,0 +1,19 @@
+- hosts: all
+  gather_facts: no
+
+  tasks:
+  - name: 'Remove to be replaced default ingress controller'
+    k8s:
+      state: absent
+      kubeconfig: "{{ aci_cni['kubeconfig'] }}"
+      force: yes
+      wait: yes
+      definition: "{{ lookup('file', 'files/ingresscontroller_internal_loadbalancer.yaml') }}"
+
+  - name: 'Replace cluster endpoint strategy to Loadbalancer'
+    k8s:
+      state: present
+      kubeconfig: "{{ aci_cni['kubeconfig'] }}"
+      force: yes
+      wait: no
+      definition: "{{ lookup('file', 'files/ingresscontroller_internal_loadbalancer.yaml') }}"
