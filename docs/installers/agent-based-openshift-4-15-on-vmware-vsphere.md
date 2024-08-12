@@ -1,13 +1,13 @@
 
-# Installing Agent Based OpenShift 4.14 on VMware vSphere
+# Installing Agent Based OpenShift 4.15 on VMware vSphere
 
 ## Table of contents
 
-* [Agent Based OpenShift 4.14 on VMware vSphere](#agent-based-openshift-4.14-on-vmware-vsphere)
+* [Agent Based OpenShift 4.15 on VMware vSphere](#agent-based-openshift-4.15-on-vmware-vsphere)
 
-* [Prerequisites for Installing Agent Based OpenShift 4.14 on VMware vSphere](#prerequisites-for-installing-agent-based-openshift-4.14-on-vmware-vsphere)
+* [Prerequisites for Installing Agent Based OpenShift 4.15 on VMware vSphere](#prerequisites-for-installing-agent-based-openshift-4.15-on-vmware-vsphere)
 
-* [Installing Agent Based OpenShift 4.14 on VMware vSphere](#installing-agent-based-openshift-4.14-on-vmware-vsphere)
+* [Installing Agent Based OpenShift 4.15 on VMware vSphere](#installing-agent-based-openshift-4.15-on-vmware-vsphere)
 
 * [Configuring ACI Infra and CNI](#configuring-aci-infra-and-cni)
 
@@ -24,15 +24,15 @@
 * [Known Caveats](#known-caveats)
 
 
-## Agent Based OpenShift 4.14 on VMware vSphere
+## Agent Based OpenShift 4.15 on VMware vSphere
 
-Cisco ACI supports Agent Based Red Hat OpenShift 4.14 on VMware vSphere. This document provides the instructions to provision OpenShift 4.14
+Cisco ACI supports Agent Based Red Hat OpenShift 4.15 on VMware vSphere. This document provides the instructions to provision OpenShift 4.15
 on VMware vSphere with the Container Network Interface (CNI) plug-in.
 
 
-## Prerequisites for Installing Agent Based OpenShift 4.14 on VMware vSphere
+## Prerequisites for Installing Agent Based OpenShift 4.15 on VMware vSphere
 
-To install Agent Based OpenShift Container Platform (OCP) 4.14 on VMware vSphere, fulfill the following prerequisites:
+To install Agent Based OpenShift Container Platform (OCP) 4.15 on VMware vSphere, fulfill the following prerequisites:
 
 ### Cisco ACI
 
@@ -49,11 +49,11 @@ Obtain the following from the Red Hat website:
 * Pull Secret
 
 
-## Installing Agent Based OpenShift 4.14 on VMware vSphere
+## Installing Agent Based OpenShift 4.15 on VMware vSphere
 
 ### Before you begin
 
-Complete the tasks in the previous section: Prerequisites for Installing Agent Based OpenShift 4.14 on VMware vSphere .
+Complete the tasks in the previous section: Prerequisites for Installing Agent Based OpenShift 4.15 on VMware vSphere .
 It is recommended to see the RedHat OpenShift documentation for prerequisites and other details about Installing a Cluster on vSphere
 
 
@@ -259,7 +259,7 @@ bootstrap directory.
 
 ## Sample Files
 
-This section contains sample files that you need for installing agent based OpenShift 4.14 on Vmware vSphere.
+This section contains sample files that you need for installing agent based OpenShift 4.15 on Vmware vSphere.
 
 **Sample acc-provision-input File**
 
@@ -645,10 +645,10 @@ sshKey: <host-ssh-key>
 ```
 
 ## Post Install Configuration and Scaling
-* As per https://docs.openshift.com/container-platform/4.14/post_installation_configuration/installing-vsphere-post-installation-configuration.html for installations using the Assisted Installer, you must update the connection settings. This is because the Assisted Installer adds default connection settings to the vSphere connection configuration wizard as placeholders during the installation
+* As per https://docs.openshift.com/container-platform/4.15/post_installation_configuration/installing-vsphere-post-installation-configuration.html for installations using the Assisted Installer, you must update the connection settings. This is because the Assisted Installer adds default connection settings to the vSphere connection configuration wizard as placeholders during the installation
 * Follow steps provided in the link: https://access.redhat.com/solutions/6677901 to modify the platform configuration which will provide cluster access to the vcenter.
 * After successful completion of above step, cluster is ready to be scaled via machineset.
-* Follow steps to create machineset as mentioned in the link: https://docs.openshift.com/container-platform/4.14/machine_management/creating_machinesets/creating-machineset-vsphere.html to scale the cluster.
+* Follow steps to create machineset as mentioned in the link: https://docs.openshift.com/container-platform/4.15/machine_management/creating_machinesets/creating-machineset-vsphere.html to scale the cluster.
 
 ## Decommissioning OpenShift
 
