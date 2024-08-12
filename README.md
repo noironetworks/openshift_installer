@@ -1,7 +1,7 @@
 OpenShift Install Guides
 ------------------------
 ### Red Hat Certified Releases
-The OCP releases certified by Red Hat are documented [here](https://access.redhat.com/articles/5436171).
+The OCP releases certified by Red Hat are documented [here](https://access.redhat.com/articles/5436171#cisco-3).
 Note that some certified releases do not have an accompanying installation document below and are available as tech preview.
 
 ### In-tree Docs
