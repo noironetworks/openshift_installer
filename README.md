@@ -5,6 +5,9 @@ The OCP releases certified by Red Hat are documented [here](https://access.redha
 Note that some certified releases do not have an accompanying installation document below and are available as tech preview.
 
 ### In-tree Docs
+#### OpenShift 4.16
+* [OpenShift 4.16 Agent-based Installation on Bare Metal](docs/installers/agent-based-openshift-4-16-on-baremetal.md)
+* [OpenShift 4.16 Agent-based Installation on VMware vSphere](docs/installers/agent-based-openshift-4-16-on-vmware-vsphere.md)
 #### OpenShift 4.15
 * [OpenShift 4.15 Agent-based Installation on Bare Metal](docs/installers/agent-based-openshift-4-15-on-baremetal.md)
 * [OpenShift 4.15 Agent-based Installation on VMware vSphere](docs/installers/agent-based-openshift-4-15-on-vmware-vsphere.md)
