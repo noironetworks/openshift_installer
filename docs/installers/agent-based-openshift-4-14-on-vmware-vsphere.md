@@ -680,3 +680,24 @@ Example:
 
 * Storage Cluster Operator Degraded -- Solution in progress -
     https://access.redhat.com/solutions/5926951
+
+* Assisted installer cluster installation fails with IP collision validation, due to a Porxy ARP request
+  https://issues.redhat.com/browse/OCPBUGS-43352
+
+  **Resolution**
+    * Start the installation as usual
+    * Get the Cluster ID:
+
+      ```curl -s http://rendezvousIP:8090/api/assisted-install/v2/clusters/ | jq ".[0].api_vips[0].cluster_id"```
+
+    * Disable Validations
+       ``` 
+          curl rendezvousIP:8090/api/assisted-install/v2/clusters/<cluster-id>/ignored-validations -X 'PUT' -H 'accept: application/json'   -H 'Content-Type: application/json'   -d '{
+          "cluster-validation-ids": "[\"all\"]",
+          "host-validation-ids": "[\"all\"]"
+          }'
+      ``` 
+    * If you observe the message below after running the previous step, wait until the installation reaches the stage where this error starts appearing
+      ```
+      {"code":"400","href":"","id":400,"kind":"Error","reason":"Cluster 11467e69-dbad-4c70-a62c-ae2b83ba47e5 is in installing state, cluster can be updated only in one of [insufficient ready pending-for-input adding-hosts]"} 
+      ```

@@ -7,7 +7,7 @@
 * [Requirements for supporting Agent Based OpenShift 4.15 on a Bare Metal Server](#requirements-for-supporting-agent-based-openshift-4.15-on-a-bare-metal-server)
 * [Installation Process](#installation-process)
 * [Scaling Agent-Based Installation with the Bare Metal Operator](#scaling-agent-based-installation-with-the-bare-metal-operator)
-
+* [Known Caveats](#known-caveats)
 
 ## Agent-Based OpenShift 4.15 on Bare Metal
 
@@ -347,7 +347,7 @@ Run the acc-provision as follows:
 ```
 $ ~/openupi$ pwd
 /home/<user>/openupi
-$ ~/openupi$ acc-provision -a -c acc_provision_input.yaml -f openshift-4.14-agent-based-baremetal -u <user> -p <password> -o aci_deployment.yaml -z aci deployment.yaml.tar.gz
+$ ~/openupi$ acc-provision -a -c acc_provision_input.yaml -f openshift-4.15-agent-based-baremetal -u <user> -p <password> -o aci_deployment.yaml -z aci deployment.yaml.tar.gz
 ```
 
 This generates a new aci_deployment.yaml.tar.gz file which contains the ACI CNI manifests, and is used later during the OpenShift installation.
@@ -644,5 +644,25 @@ Proceed with the tracking and verifying installation progress of the
 cluster; see the *Redhat OpenShift 4.15 document* (mentioned earlier in
 the chapter).
 
-## 
+## Known Caveats
+* Assisted installer cluster installation fails with IP collision validation, due to a Porxy ARP request
+  https://issues.redhat.com/browse/OCPBUGS-43352
+
+  **Resolution**
+    * Start the installation as usual
+    * Get the Cluster ID:
+
+      ```curl -s http://rendezvousIP:8090/api/assisted-install/v2/clusters/ | jq ".[0].api_vips[0].cluster_id"```
+
+    * Disable Validations
+       ``` 
+          curl rendezvousIP:8090/api/assisted-install/v2/clusters/<cluster-id>/ignored-validations -X 'PUT' -H 'accept: application/json'   -H 'Content-Type: application/json'   -d '{
+          "cluster-validation-ids": "[\"all\"]",
+          "host-validation-ids": "[\"all\"]"
+          }'
+      ```
+  * If you observe the message below after running the previous step, wait until the installation reaches the stage where this error starts appearing
+    ```
+    {"code":"400","href":"","id":400,"kind":"Error","reason":"Cluster 11467e69-dbad-4c70-a62c-ae2b83ba47e5 is in installing state, cluster can be updated only in one of [insufficient ready pending-for-input adding-hosts]"} 
+    ```
 
