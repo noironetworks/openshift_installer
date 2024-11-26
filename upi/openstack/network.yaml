@@ -141,16 +141,6 @@
       - os_networking_type == "CiscoACI"
       - primary_cluster_subnet.stdout == ""
 
-  - name: 'Create the cluster IPv6 subnet'
-    openstack.cloud.subnet:
-      name: "{{ os_subnet6 }}"
-      network_name: "{{ os_network }}"
-      cidr: "{{ os_subnet6_range }}"
-      ip_version: 6
-      ipv6_address_mode: "{{ os_subnet6_address_mode }}"
-      ipv6_ra_mode: "{{ os_subnet6_router_advertisements_mode }}"
-    when: os_subnet6 is defined
-
   - name: 'list external router'
     command:
       cmd: "openstack router list --name {{ os_router }}"
@@ -191,8 +181,6 @@
     openstack.cloud.port:
       name: "{{ os_port_api }}"
       network: "{{ os_network }}"
-      security_groups:
-      - "{{ os_sg_master }}"
       fixed_ips:
       - subnet: "{{ os_subnet }}"
         ip_address: "{{ os_apiVIP }}"
@@ -223,8 +211,6 @@
     openstack.cloud.port:
       name: "{{ os_port_ingress }}"
       network: "{{ os_network }}"
-      security_groups:
-      - "{{ os_sg_worker }}"
       fixed_ips:
       - subnet: "{{ os_subnet }}"
         ip_address: "{{ os_ingressVIP }}"
