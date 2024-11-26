@@ -181,8 +181,6 @@
     openstack.cloud.port:
       name: "{{ os_port_api }}"
       network: "{{ os_network }}"
-      security_groups:
-      - "{{ os_sg_master }}"
       fixed_ips:
       - subnet: "{{ os_subnet }}"
         ip_address: "{{ os_apiVIP }}"
@@ -213,8 +211,6 @@
     openstack.cloud.port:
       name: "{{ os_port_ingress }}"
       network: "{{ os_network }}"
-      security_groups:
-      - "{{ os_sg_worker }}"
       fixed_ips:
       - subnet: "{{ os_subnet }}"
         ip_address: "{{ os_ingressVIP }}"
