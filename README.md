@@ -18,7 +18,6 @@ Note that some certified releases do not have an accompanying installation docum
 ### Cisco Published Documents
 #### OpenShift 4.15
 * [OpenShift 4.15 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-openshift-4-15-on-vmware-vsphere.html)
-* [OpenShift 4.15 on OpenStack 16.2](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-15-on-openstack-16-2.html)
 #### OpenShift 4.14
 * [OpenShift 4.14 Agent-based Installation on Bare Metal](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-baremetal/installing-agent-based-openshift-4-14-on-baremetal.html)
 * [OpenShift 4.14 Agent-based Installation on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-agent-based-openshift-4-14-vmware-vsphere.html)
