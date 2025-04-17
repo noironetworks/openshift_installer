@@ -130,7 +130,7 @@ def update(hostname,ignition):
 
     config_data = {}
 
-    ifcfg_ens3 = ("""TYPE=Ethernet
+    ifcfg_node = ("""TYPE=Ethernet
 DEVICE=""" + node_interface + """
 ONBOOT=yes
 BOOTPROTO=dhcp
@@ -140,16 +140,19 @@ BROWSER_ONLY=no
 MTU=""" + neutron_network_mtu + """
 IPV4_FAILURE_FATAL=no
 IPV6INIT=no
-ETHTOOL_OPTS="-K ens3 tx-checksum-ip-generic off"
-NAME="System ens3"
+ETHTOOL_OPTS="-K """ + node_interface + """ tx-checksum-ip-generic off"
+NAME="System """ + node_interface + """"
 UUID=21d47e65-8523-1a06-af22-6f121086f085
 """).encode()
 
-    ifcfg_ens3_b64 = base64.standard_b64encode(ifcfg_ens3).decode().strip()
+    ifcfg_node_b64 = base64.standard_b64encode(ifcfg_node).decode().strip()
 
-    config_data['ifcfg_ens3'] = {'base64': ifcfg_ens3_b64, 'path': '/etc/sysconfig/network-scripts/ifcfg-ens3'}
+    config_data['ifcfg_{}'.format(node_interface)] = {
+       'base64': ifcfg_node_b64,
+       'path': '/etc/sysconfig/network-scripts/ifcfg-{}'.format(node_interface)
+    }
 
-    ifcfg_ens4 = ("""TYPE=Ethernet
+    ifcfg_opflex = ("""TYPE=Ethernet
 DEVICE=""" + opflex_interface + """
 ONBOOT=yes
 BOOTPROTO=dhcp
@@ -159,14 +162,17 @@ BROWSER_ONLY=no
 MTU=""" + opflex_network_mtu + """
 IPV4_FAILURE_FATAL=no
 IPV6INIT=no
-ETHTOOL_OPTS="-K ens4 tx-checksum-ip-generic off"
-NAME="System ens4"
+ETHTOOL_OPTS="-K """ + opflex_interface + """ tx-checksum-ip-generic off"
+NAME="System """ + opflex_interface + """"
 UUID=e27f182b-d125-2c43-5a30-43524d0229ac
 """).encode()
 
-    ifcfg_ens4_b64 = base64.standard_b64encode(ifcfg_ens4).decode().strip()
+    ifcfg_opflex_b64 = base64.standard_b64encode(ifcfg_opflex).decode().strip()
 
-    config_data['ifcfg_ens4'] = {'base64': ifcfg_ens4_b64, 'path': '/etc/sysconfig/network-scripts/ifcfg-ens4'}
+    config_data['ifcfg_{}'.format(opflex_interface)] = {
+        'base64': ifcfg_opflex_b64,
+        'path': '/etc/sysconfig/network-scripts/ifcfg-{}'.format(opflex_interface)
+    }
 
     opflex_conn = ("""VLAN=yes
 TYPE=Vlan
@@ -186,7 +192,7 @@ DEVICE=""" + opflex_interface + """.""" + infra_vlan + """
 ONBOOT=yes
 MTU=""" + opflex_network_mtu + """
 HWADDR=
-ETHTOOL_OPTS="-K net0 tx-checksum-ip-generic off"
+ETHTOOL_OPTS="-K """ + opflex_interface + "." + infra_vlan + """ tx-checksum-ip-generic off"
 UUID=eb4377c5-a6d1-f09a-f588-7a6122be32f5
 """).encode()
 
@@ -257,6 +263,7 @@ METRIC0=1000
 
     else:
          hostname_b64 = base64.standard_b64encode(hostname).decode().strip()
+
          files.append(
              {
                  'path': '/etc/hostname',
@@ -270,10 +277,10 @@ METRIC0=1000
 
          files.append(
              {
-                 'path': config_data['ifcfg_ens3']['path'],
+                 'path': config_data['ifcfg_{}'.format(node_interface)]['path'],
                  'mode': 420,
                  'contents': {
-                     'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_ens3']['base64'],
+                     'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_{}'.format(node_interface)]['base64'],
                      'verification': {}
                  },
                  'filesystem': 'root',
@@ -281,10 +288,10 @@ METRIC0=1000
 
          files.append(
              {
-                 'path': config_data['ifcfg_ens4']['path'],
+                 'path': config_data['ifcfg_{}'.format(opflex_interface)]['path'],
                  'mode': 420,
                  'contents': {
-                     'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_ens4']['base64'],
+                     'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_{}'.format(opflex_interface)]['base64'],
                      'verification': {}
                  },
                  'filesystem': 'root',
