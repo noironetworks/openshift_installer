@@ -162,15 +162,6 @@
       network: "{{ os_external_network }}"
       interfaces:
       - "{{ os_subnet }}"
-    when:
-      - os_external_network is defined and os_external_network|length>0
-      - ext_router_list.stdout == ""
-
-  - name: 'Add IPv6 subnet to the external router'
-    openstack.cloud.router:
-      name: "{{ os_router }}"
-      interfaces:
-      - "{{ os_subnet }}"
       - "{{ os_subnet6 }}"
     when:
     - os_external_network is defined
