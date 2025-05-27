@@ -97,10 +97,10 @@ try:
         cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['mtu'] = 1500
 
     if 'name' not in cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']:
-        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['name'] = 'ens4'
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['name'] = 'enp4s0'
 
     if 'name' not in cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']:
-        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['name'] = 'ens3'
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['name'] = 'enp3s0'
 
     if 'subnet' not in cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']:
         cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['subnet'] = '192.168.208.0/20'
@@ -147,7 +147,7 @@ UUID=21d47e65-8523-1a06-af22-6f121086f085
 
     ifcfg_node_b64 = base64.standard_b64encode(ifcfg_node).decode().strip()
 
-    config_data['ifcfg_{}'.format(node_interface)] = {
+    config_data['ifcfg_node'] = {
        'base64': ifcfg_node_b64,
        'path': '/etc/sysconfig/network-scripts/ifcfg-{}'.format(node_interface)
     }
@@ -169,7 +169,7 @@ UUID=e27f182b-d125-2c43-5a30-43524d0229ac
 
     ifcfg_opflex_b64 = base64.standard_b64encode(ifcfg_opflex).decode().strip()
 
-    config_data['ifcfg_{}'.format(opflex_interface)] = {
+    config_data['ifcfg_opflex'] = {
         'base64': ifcfg_opflex_b64,
         'path': '/etc/sysconfig/network-scripts/ifcfg-{}'.format(opflex_interface)
     }
@@ -277,10 +277,10 @@ METRIC0=1000
 
          files.append(
              {
-                 'path': config_data['ifcfg_{}'.format(node_interface)]['path'],
+                 'path': config_data['ifcfg_node']['path'],
                  'mode': 420,
                  'contents': {
-                     'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_{}'.format(node_interface)]['base64'],
+                     'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_node']['base64'],
                      'verification': {}
                  },
                  'filesystem': 'root',
@@ -288,10 +288,10 @@ METRIC0=1000
 
          files.append(
              {
-                 'path': config_data['ifcfg_{}'.format(opflex_interface)]['path'],
+                 'path': config_data['ifcfg_opflex']['path'],
                  'mode': 420,
                  'contents': {
-                     'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_{}'.format(opflex_interface)]['base64'],
+                     'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_opflex']['base64'],
                      'verification': {}
                  },
                  'filesystem': 'root',
