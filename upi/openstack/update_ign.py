@@ -97,10 +97,10 @@ try:
         cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['mtu'] = 1500
 
     if 'name' not in cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']:
-        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['name'] = 'ens4'
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['name'] = 'enp4s0'
 
     if 'name' not in cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']:
-        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['name'] = 'ens3'
+        cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['node']['name'] = 'enp3s0'
 
     if 'subnet' not in cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']:
         cur_yaml['all']['hosts']['localhost']['aci_cni']['network_interfaces']['opflex']['subnet'] = '192.168.208.0/20'
@@ -232,11 +232,13 @@ METRIC0=1000
         # Add master and worker network scripts to bootstrap ignition
         env = Environment(loader = FileSystemLoader('./templates'), trim_blocks=True, lstrip_blocks=True)
         template_worker = env.get_template('99_worker-networkscripts.yaml')
-        rendered_worker = template_worker.render(config_data)
+        rendered_worker = template_worker.render(
+            config_data=config_data, node_interface=node_interface, opflex_interface=opflex_interface)
         worker_b64 = base64.standard_b64encode(rendered_worker.encode()).decode().strip()
 
         template_master = env.get_template('99_master-networkscripts.yaml')
-        rendered_master = template_master.render(config_data)
+        rendered_master = template_master.render(
+            config_data=config_data, node_interface=node_interface, opflex_interface=opflex_interface)
         master_b64 = base64.standard_b64encode(rendered_master.encode()).decode().strip()
 
         files.append(
