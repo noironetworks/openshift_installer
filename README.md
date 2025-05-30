@@ -23,9 +23,13 @@ Note that some certified releases do not have an accompanying installation docum
 * [OpenShift 4.17 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-openshift-4-17-on-vmware-vsphere.html)
 * [OpenShift 4.17 on OpenStack 17.1](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-17-on-openstack-17-1.html)
 #### OpenShift 4.16
+* [OpenShift 4.16 Agent-based Installation on Bare Metal](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-baremetal/installing-agent-based-openshift-4-16-on-baremetal.html)
+* [OpenShift 4.16 Agent-based Installation on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-agent-based-openshift-4-16-vmware-vsphere.html)
 * [OpenShift 4.16 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-openshift-4-16-on-vmware-vsphere.html)
 * [OpenShift 4.16 on OpenStack 17.1](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-16-on-openstack-17-1.html)
 #### OpenShift 4.15
+* [OpenShift 4.15 Agent-based Installation on Bare Metal](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-baremetal/installing-agent-based-openshift-4-15-on-baremetal.html)
+* [OpenShift 4.15 Agent-based Installation on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-agent-based-openshift-4-15-vmware-vsphere.html)
 * [OpenShift 4.15 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-openshift-4-15-on-vmware-vsphere.html)
 * [OpenShift 4.15 on OpenStack 17.1](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-15-on-openstack-17-1.html)
 #### OpenShift 4.14
