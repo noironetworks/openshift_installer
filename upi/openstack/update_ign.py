@@ -147,7 +147,7 @@ UUID=21d47e65-8523-1a06-af22-6f121086f085
 
     ifcfg_node_b64 = base64.standard_b64encode(ifcfg_node).decode().strip()
 
-    config_data['ifcfg_node'] = {
+    config_data['ifcfg_{}'.format(node_interface)] = {
        'base64': ifcfg_node_b64,
        'path': '/etc/sysconfig/network-scripts/ifcfg-{}'.format(node_interface)
     }
@@ -169,7 +169,7 @@ UUID=e27f182b-d125-2c43-5a30-43524d0229ac
 
     ifcfg_opflex_b64 = base64.standard_b64encode(ifcfg_opflex).decode().strip()
 
-    config_data['ifcfg_opflex'] = {
+    config_data['ifcfg_{}'.format(opflex_interface)] = {
         'base64': ifcfg_opflex_b64,
         'path': '/etc/sysconfig/network-scripts/ifcfg-{}'.format(opflex_interface)
     }
@@ -232,11 +232,13 @@ METRIC0=1000
         # Add master and worker network scripts to bootstrap ignition
         env = Environment(loader = FileSystemLoader('./templates'), trim_blocks=True, lstrip_blocks=True)
         template_worker = env.get_template('99_worker-networkscripts.yaml')
-        rendered_worker = template_worker.render(config_data)
+        rendered_worker = template_worker.render(
+            config_data=config_data, node_interface=node_interface, opflex_interface=opflex_interface)
         worker_b64 = base64.standard_b64encode(rendered_worker.encode()).decode().strip()
 
         template_master = env.get_template('99_master-networkscripts.yaml')
-        rendered_master = template_master.render(config_data)
+        rendered_master = template_master.render(
+            config_data=config_data, node_interface=node_interface, opflex_interface=opflex_interface)
         master_b64 = base64.standard_b64encode(rendered_master.encode()).decode().strip()
 
         files.append(
@@ -277,10 +279,10 @@ METRIC0=1000
 
          files.append(
              {
-                 'path': config_data['ifcfg_node']['path'],
+                 'path': config_data['ifcfg_{}'.format(node_interface)]['path'],
                  'mode': 420,
                  'contents': {
-                     'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_node']['base64'],
+                     'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_{}'.format(node_interface)]['base64'],
                      'verification': {}
                  },
                  'filesystem': 'root',
@@ -288,10 +290,10 @@ METRIC0=1000
 
          files.append(
              {
-                 'path': config_data['ifcfg_opflex']['path'],
+                 'path': config_data['ifcfg_{}'.format(opflex_interface)]['path'],
                  'mode': 420,
                  'contents': {
-                     'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_opflex']['base64'],
+                     'source': 'data:text/plain;charset=utf-8;base64,' + config_data['ifcfg_{}'.format(opflex_interface)]['base64'],
                      'verification': {}
                  },
                  'filesystem': 'root',
