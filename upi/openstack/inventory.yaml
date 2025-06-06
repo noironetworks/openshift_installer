@@ -98,13 +98,13 @@ all:
         kubeconfig: /path/kubeconfig
         network_interfaces:
           node:
-            name: ens3 # Optional
+            name: enp3s0 # Optional
             mtu: 1500 # Optional
             bd: uni/tn-prj_<openstack-prj-id>/BD-aci-containers-<system-id>-node-bd # Derived
             vrf: uni/tn-<vrf-tenant>/ctx-<vrf-name> # Derived
           opflex:
             mtu: 1500 # Optional
-            name: ens4 # Optional
+            name: enp4s0 # Optional
             subnet: 192.168.208.0/20 # Optional
         cluster_snat_policy_ip: <IP> # Optional, no default value
         dns_ips: [<list of dns ip's>] # Optional, no default value
