@@ -19,6 +19,8 @@ Note that some certified releases do not have an accompanying installation docum
 * [OpenShift 4.14 Agent-based Installation on VMware vSphere](docs/installers/agent-based-openshift-4-14-on-vmware-vsphere.md)
 
 ### Cisco Published Documents
+#### OpenShift 4.18
+* [OpenShift 4.18 on OpenStack 17.1](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-18-on-openstack-17-1.html)
 #### OpenShift 4.17
 * [OpenShift 4.17 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-openshift-4-17-on-vmware-vsphere.html)
 * [OpenShift 4.17 on OpenStack 17.1](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-17-on-openstack-17-1.html)
