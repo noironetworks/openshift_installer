@@ -1,13 +1,13 @@
 
-# Installing Agent Based OpenShift 4.16 on VMware vSphere
+# Installing Agent Based OpenShift 4.19 on VMware vSphere
 
 ## Table of contents
 
-* [Agent Based OpenShift 4.16 on VMware vSphere](#agent-based-openshift-4.16-on-vmware-vsphere)
+* [Agent Based OpenShift 4.19 on VMware vSphere](#agent-based-openshift-4.19-on-vmware-vsphere)
 
-* [Prerequisites for Installing Agent Based OpenShift 4.16 on VMware vSphere](#prerequisites-for-installing-agent-based-openshift-4.16-on-vmware-vsphere)
+* [Prerequisites for Installing Agent Based OpenShift 4.19 on VMware vSphere](#prerequisites-for-installing-agent-based-openshift-4.19-on-vmware-vsphere)
 
-* [Installing Agent Based OpenShift 4.16 on VMware vSphere](#installing-agent-based-openshift-4.16-on-vmware-vsphere)
+* [Installing Agent Based OpenShift 4.19 on VMware vSphere](#installing-agent-based-openshift-4.19-on-vmware-vsphere)
 
 * [Configuring ACI Infra and CNI](#configuring-aci-infra-and-cni)
 
@@ -24,21 +24,21 @@
 * [Known Caveats](#known-caveats)
 
 
-## Agent Based OpenShift 4.16 on VMware vSphere
+## Agent Based OpenShift 4.19 on VMware vSphere
 
-Cisco ACI supports Agent Based Red Hat OpenShift 4.16 on VMware vSphere. This document provides the instructions to provision OpenShift 4.16
+Cisco ACI supports Agent Based Red Hat OpenShift 4.19 on VMware vSphere. This document provides the instructions to provision OpenShift 4.19
 on VMware vSphere with the Container Network Interface (CNI) plug-in.
 
 
-## Prerequisites for Installing Agent Based OpenShift 4.16 on VMware vSphere
+## Prerequisites for Installing Agent Based OpenShift 4.19 on VMware vSphere
 
-To install Agent Based OpenShift Container Platform (OCP) 4.16 on VMware vSphere, fulfill the following prerequisites:
+To install Agent Based OpenShift Container Platform (OCP) 4.19 on VMware vSphere, fulfill the following prerequisites:
 
 ### Cisco ACI
 
-* Download the acc-provision tool version `6.0.4.1` or later.
-* Specify the `--flavor` option value as `openshift-4.16-agent-based-esx` and use the `-z` option. 
-* The tool creates a `.tar` archive file as specified by the `-z` option value. You need this archive file during installation. Make sure that the Cisco ACI container images that are specified as input to the acc-provision tool are version `6.0.4.1` or later.
+* Download the acc-provision tool version `6.1.1.4` or later.
+* Specify the `--flavor` option value as `openshift-4.19-agent-based-esx` and use the `-z` option. 
+* The tool creates a `.tar` archive file as specified by the `-z` option value. You need this archive file during installation. Make sure that the Cisco ACI container images that are specified as input to the acc-provision tool are version `6.1.1.4` or later.
 
 ### VMware vSphere
 Obtain user credentials with privileges to create virtual machines (VMs).
@@ -49,11 +49,11 @@ Obtain the following from the Red Hat website:
 * Pull Secret
 
 
-## Installing Agent Based OpenShift 4.16 on VMware vSphere
+## Installing Agent Based OpenShift 4.19 on VMware vSphere
 
 ### Before you begin
 
-Complete the tasks in the previous section: Prerequisites for Installing Agent Based OpenShift 4.16 on VMware vSphere .
+Complete the tasks in the previous section: Prerequisites for Installing Agent Based OpenShift 4.19 on VMware vSphere .
 It is recommended to see the RedHat OpenShift documentation for prerequisites and other details about Installing a Cluster on vSphere
 
 
@@ -72,7 +72,7 @@ Procedure
 ```
 $ ~/openupi$ pwd
 /home/<user>/openupi
-$ ~/openupi$ acc-provision -a -c acc_provision_input.yaml  -f openshift-4.16-agent-based-esx -u <user> -p <password> -o aci_deployment.yaml -z aci deployment.yaml.tar.gz
+$ ~/openupi$ acc-provision -a -c acc_provision_input.yaml  -f openshift-4.19-agent-based-esx -u <user> -p <password> -o aci_deployment.yaml -z aci deployment.yaml.tar.gz
 ```
 
 This generates a new aci_deployment.yaml.tar.gz file which contains the ACI CNI manifests, and is used later during the OpenShift installation.
@@ -259,7 +259,7 @@ bootstrap directory.
 
 ## Sample Files
 
-This section contains sample files that you need for installing agent based OpenShift 4.16 on Vmware vSphere.
+This section contains sample files that you need for installing agent based OpenShift 4.19 on Vmware vSphere.
 
 **Sample acc-provision-input File**
 
@@ -645,10 +645,10 @@ sshKey: <host-ssh-key>
 ```
 
 ## Post Install Configuration and Scaling
-* As per https://docs.openshift.com/container-platform/4.16/post_installation_configuration/installing-vsphere-post-installation-configuration.html for installations using the Assisted Installer, you must update the connection settings. This is because the Assisted Installer adds default connection settings to the vSphere connection configuration wizard as placeholders during the installation
+* As per https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/postinstallation_configuration/index for installations using the Assisted Installer, you must update the connection settings. This is because the Assisted Installer adds default connection settings to the vSphere connection configuration wizard as placeholders during the installation
 * Follow steps provided in the link: https://access.redhat.com/solutions/6677901 to modify the platform configuration which will provide cluster access to the vcenter.
 * After successful completion of above step, cluster is ready to be scaled via machineset.
-* Follow steps to create machineset as mentioned in the link: https://docs.openshift.com/container-platform/4.16/machine_management/creating_machinesets/creating-machineset-vsphere.html to scale the cluster.
+* Follow steps to create machineset as mentioned in the link: https://docs.redhat.com/en/documentation/openshift_container_platform/4.19/html/machine_management/managing-compute-machines-with-the-machine-api#creating-machineset-vsphere to scale the cluster.
 
 ## Decommissioning OpenShift
 
@@ -667,10 +667,10 @@ The acc-provision tool can be used to remove that configuration.
 
 Use the following command from the machine and folder which was used to provision the ACI infrastructure, to delete the pre-provisioned configurations and the VMM domain.
 
-```acc-provision -d -f openshift-4.16-agent-based-esx -c acc-input-file -u user -p password```
+```acc-provision -d -f openshift-4.19-agent-based-esx -c acc-input-file -u user -p password```
 
 Example:
-`acc-provision -d -f openshift-4.16-agent-based-esx -c acc-input-config.yaml -u admin -p password`
+`acc-provision -d -f openshift-4.19-agent-based-esx -c acc-input-config.yaml -u admin -p password`
 
 
 ## Known Caveats

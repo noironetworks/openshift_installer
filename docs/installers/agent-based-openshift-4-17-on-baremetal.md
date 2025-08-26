@@ -346,7 +346,7 @@ Run the acc-provision as follows:
 ```
 $ ~/openupi$ pwd
 /home/<user>/openupi
-$ ~/openupi$ acc-provision -a -c acc_provision_input.yaml -f openshift-4.14-agent-based-baremetal -u <user> -p <password> -o aci_deployment.yaml -z aci deployment.yaml.tar.gz
+$ ~/openupi$ acc-provision -a -c acc_provision_input.yaml -f openshift-4.17-agent-based-baremetal -u <user> -p <password> -o aci_deployment.yaml -z aci deployment.yaml.tar.gz
 ```
 
 This generates a new aci_deployment.yaml.tar.gz file which contains the ACI CNI manifests, and is used later during the OpenShift installation.
@@ -493,10 +493,18 @@ ACI Loadbalancer, log in as a user with cluster-admin privileges and run
 the following:
 
 ```
-oc replace --force --wait --filename - <<EOF apiVersion: operator.openshift.io/v1 kind: IngressController metadata:
-namespace: openshift-ingress-operator name: default spec:
-endpointPublishingStrategy: type: LoadBalancerService loadBalancer:
-scope: External EOF
+oc replace --force --wait --filename - <<EOF
+apiVersion: operator.openshift.io/v1
+kind: IngressController
+metadata:
+  namespace: openshift-ingress-operator
+  name: default
+spec:
+  endpointPublishingStrategy:
+    type: LoadBalancerService
+    loadBalancer:
+      scope: External
+EOF
 `````
 
 For more details, see the *Configuring the Default Ingress Controller

@@ -1,28 +1,28 @@
 
-# Installing Agent Based OpenShift 4.15 on a Bare Metal Server
+# Installing Agent Based OpenShift 4.19 on a Bare Metal Server
 
 ## Table of contents
 
-* [Agent-Based OpenShift 4.15 on Bare Metal](#agent-based-openshift-4.15-on-bare-metal)
-* [Requirements for supporting Agent Based OpenShift 4.15 on a Bare Metal Server](#requirements-for-supporting-agent-based-openshift-4.15-on-a-bare-metal-server)
+* [Agent-Based OpenShift 4.19 on Bare Metal](#agent-based-openshift-4.19-on-bare-metal)
+* [Requirements for supporting Agent Based OpenShift 4.19 on a Bare Metal Server](#requirements-for-supporting-agent-based-openshift-4.19-on-a-bare-metal-server)
 * [Installation Process](#installation-process)
 * [Scaling Agent-Based Installation with the Bare Metal Operator](#scaling-agent-based-installation-with-the-bare-metal-operator)
 * [Known Caveats](#known-caveats)
 
-## Agent-Based OpenShift 4.15 on Bare Metal
+## Agent-Based OpenShift 4.19 on Bare Metal
 
 This document pertains to installing OCP with the ACI CNI. However, to
 identify and resolve issues in your infrastructure not related to the
 ACI CNI, see the relevant installation guide to first install OCP on
 your bare metal nodes using the default OVN Kubernetes. *You can check
-the OpenShift 4.15 container platform documentation.*
+the OpenShift 4.19 container platform documentation.*
 
 **Note** This document can not be used standalone. This document
-should be used along with the *Red Hat OpenShift 4.15 Installing an
+should be used along with the *Red Hat OpenShift 4.19 Installing an
 on-premise cluster with the Agent-based Installer* document to perform
 the OpenShift cluster installation.
 
-## Requirements for supporting Agent Based OpenShift 4.15 on a Bare Metal Server
+## Requirements for supporting Agent Based OpenShift 4.19 on a Bare Metal Server
 
 At least two network interfaces are required for bare metal nodes, one
 for the node network, and the second for the pod network. The design
@@ -53,7 +53,6 @@ additional VLAN(s) for management purpose or use the node network for
 management network. The design might be dependent on the server
 provisioning method (PXE or manual ISO boot).
 
-# 
 
 ## Installation Process
 
@@ -82,7 +81,7 @@ section "Scaling Agent-Based Installation with the Bare Metal Operator"
 Download the OpenShift installer and OC client.
 
 1.  For details of the location from where you can download the
-    installer, see the OpenShift 4.15 document titled, *Installing an
+    installer, see the OpenShift 4.19 document titled, *Installing an
     on-premise cluster with the Agent-based Installer*
 
 ### Procedure
@@ -347,7 +346,7 @@ Run the acc-provision as follows:
 ```
 $ ~/openupi$ pwd
 /home/<user>/openupi
-$ ~/openupi$ acc-provision -a -c acc_provision_input.yaml -f openshift-4.15-agent-based-baremetal -u <user> -p <password> -o aci_deployment.yaml -z aci deployment.yaml.tar.gz
+$ ~/openupi$ acc-provision -a -c acc_provision_input.yaml -f openshift-4.19-agent-based-baremetal -u <user> -p <password> -o aci_deployment.yaml -z aci deployment.yaml.tar.gz
 ```
 
 This generates a new aci_deployment.yaml.tar.gz file which contains the ACI CNI manifests, and is used later during the OpenShift installation.
@@ -649,28 +648,28 @@ oc scale machineset -n openshift-machine-api <worker-machineset> --replicas=1
 **What to do next**
 
 Proceed with the tracking and verifying installation progress of the
-cluster; see the *Redhat OpenShift 4.15 document* (mentioned earlier in
+cluster; see the *Redhat OpenShift 4.19 document* (mentioned earlier in
 the chapter).
 
 ## Known Caveats
 * Assisted installer cluster installation fails with IP collision validation, due to a Porxy ARP request
   https://issues.redhat.com/browse/OCPBUGS-43352
 
-  **Resolution**
-    * Start the installation as usual
-    * Get the Cluster ID:
+**Resolution**
+* Start the installation as usual
+* Get the Cluster ID:
 
-      ```curl -s http://rendezvousIP:8090/api/assisted-install/v2/clusters/ | jq ".[0].api_vips[0].cluster_id"```
+  ```curl -s http://rendezvousIP:8090/api/assisted-install/v2/clusters/ | jq ".[0].api_vips[0].cluster_id"```
 
-    * Disable Validations
-       ``` 
-          curl rendezvousIP:8090/api/assisted-install/v2/clusters/<cluster-id>/ignored-validations -X 'PUT' -H 'accept: application/json'   -H 'Content-Type: application/json'   -d '{
-          "cluster-validation-ids": "[\"all\"]",
-          "host-validation-ids": "[\"all\"]"
-          }'
-      ```
-  * If you observe the message below after running the previous step, wait until the installation reaches the stage where this error starts appearing
-    ```
-    {"code":"400","href":"","id":400,"kind":"Error","reason":"Cluster 11467e69-dbad-4c70-a62c-ae2b83ba47e5 is in installing state, cluster can be updated only in one of [insufficient ready pending-for-input adding-hosts]"} 
-    ```
+* Disable Validations
+   ``` 
+      curl rendezvousIP:8090/api/assisted-install/v2/clusters/<cluster-id>/ignored-validations -X 'PUT' -H 'accept: application/json'   -H 'Content-Type: application/json'   -d '{
+      "cluster-validation-ids": "[\"all\"]",
+      "host-validation-ids": "[\"all\"]"
+      }'
+  ```
+* If you observe the message below after running the previous step, wait until the installation reaches the stage where this error starts appearing
+  ```
+  {"code":"400","href":"","id":400,"kind":"Error","reason":"Cluster 11467e69-dbad-4c70-a62c-ae2b83ba47e5 is in installing state, cluster can be updated only in one of [insufficient ready pending-for-input adding-hosts]"} 
+  ```
 
