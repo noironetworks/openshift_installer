@@ -494,10 +494,18 @@ ACI Loadbalancer, log in as a user with cluster-admin privileges and run
 the following:
 
 ```
-oc replace --force --wait --filename - <<EOF apiVersion: operator.openshift.io/v1 kind: IngressController metadata:
-namespace: openshift-ingress-operator name: default spec:
-endpointPublishingStrategy: type: LoadBalancerService loadBalancer:
-scope: External EOF
+oc replace --force --wait --filename - <<EOF
+apiVersion: operator.openshift.io/v1
+kind: IngressController
+metadata:
+  namespace: openshift-ingress-operator
+  name: default
+spec:
+  endpointPublishingStrategy:
+    type: LoadBalancerService
+    loadBalancer:
+      scope: External
+EOF
 `````
 
 For more details, see the *Configuring the Default Ingress Controller

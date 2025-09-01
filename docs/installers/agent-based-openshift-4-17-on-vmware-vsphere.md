@@ -37,7 +37,7 @@ To install Agent Based OpenShift Container Platform (OCP) 4.17 on VMware vSphere
 ### Cisco ACI
 
 * Download the acc-provision tool version `6.0.4.1` or later.
-* Specify the `--flavor` option value as `openshift-4.14-agent-based-esx` and use the `-z` option. 
+* Specify the `--flavor` option value as `openshift-4.17-agent-based-esx` and use the `-z` option. 
 * The tool creates a `.tar` archive file as specified by the `-z` option value. You need this archive file during installation. Make sure that the Cisco ACI container images that are specified as input to the acc-provision tool are version `6.0.4.1` or later.
 
 ### VMware vSphere
@@ -72,7 +72,7 @@ Procedure
 ```
 $ ~/openupi$ pwd
 /home/<user>/openupi
-$ ~/openupi$ acc-provision -a -c acc_provision_input.yaml  -f openshift-4.14-agent-based-esx -u <user> -p <password> -o aci_deployment.yaml -z aci deployment.yaml.tar.gz
+$ ~/openupi$ acc-provision -a -c acc_provision_input.yaml  -f openshift-4.17-agent-based-esx -u <user> -p <password> -o aci_deployment.yaml -z aci deployment.yaml.tar.gz
 ```
 
 This generates a new aci_deployment.yaml.tar.gz file which contains the ACI CNI manifests, and is used later during the OpenShift installation.
@@ -667,10 +667,10 @@ The acc-provision tool can be used to remove that configuration.
 
 Use the following command from the machine and folder which was used to provision the ACI infrastructure, to delete the pre-provisioned configurations and the VMM domain.
 
-```acc-provision -d -f openshift-4.14-agent-based-esx -c acc-input-file -u user -p password```
+```acc-provision -d -f openshift-4.17-agent-based-esx -c acc-input-file -u user -p password```
 
 Example:
-`acc-provision -d -f openshift-4.14-agent-based-esx -c acc-input-config.yaml -u admin -p password`
+`acc-provision -d -f openshift-4.17-agent-based-esx -c acc-input-config.yaml -u admin -p password`
 
 
 ## Known Caveats

@@ -37,7 +37,7 @@ To install Agent Based OpenShift Container Platform (OCP) 4.15 on VMware vSphere
 ### Cisco ACI
 
 * Download the acc-provision tool version `6.0.4.1` or later.
-* Specify the `--flavor` option value as `openshift-4.14-agent-based-esx` and use the `-z` option. 
+* Specify the `--flavor` option value as `openshift-4.15-agent-based-esx` and use the `-z` option. 
 * The tool creates a `.tar` archive file as specified by the `-z` option value. You need this archive file during installation. Make sure that the Cisco ACI container images that are specified as input to the acc-provision tool are version `6.0.4.1` or later.
 
 ### VMware vSphere
@@ -72,7 +72,7 @@ Procedure
 ```
 $ ~/openupi$ pwd
 /home/<user>/openupi
-$ ~/openupi$ acc-provision -a -c acc_provision_input.yaml  -f openshift-4.14-agent-based-esx -u <user> -p <password> -o aci_deployment.yaml -z aci deployment.yaml.tar.gz
+$ ~/openupi$ acc-provision -a -c acc_provision_input.yaml  -f openshift-4.15-agent-based-esx -u <user> -p <password> -o aci_deployment.yaml -z aci deployment.yaml.tar.gz
 ```
 
 This generates a new aci_deployment.yaml.tar.gz file which contains the ACI CNI manifests, and is used later during the OpenShift installation.
