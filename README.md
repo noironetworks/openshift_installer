@@ -29,6 +29,7 @@ Note that some certified releases do not have an accompanying installation docum
 * [OpenShift 4.19 Agent-based Installation on Bare Metal](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-baremetal/installing-agent-based-openshift-4-19-on-baremetal.html)
 * [OpenShift 4.19 Agent-based Installation on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-agent-based-openshift-4-19-vmware-vsphere.html)
 * [OpenShift 4.19 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-openshift-4-19-on-vmware-vsphere.html)
+* [OpenShift 4.19 on OpenStack 17.1](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-19-on-openstack-17-1.html)
 #### OpenShift 4.18
 * [OpenShift 4.18 Agent-based Installation on Bare Metal](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-baremetal/installing-agent-based-openshift-4-18-on-baremetal.html)
 * [OpenShift 4.18 Agent-based Installation on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-agent-based-openshift-4-18-vmware-vsphere.html)
