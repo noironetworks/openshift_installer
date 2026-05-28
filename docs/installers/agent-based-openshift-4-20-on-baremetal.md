@@ -334,8 +334,8 @@ net_config:	                # This should also exist, the provisioning tool does
   extern_static: 10.4.0.1/16	# Subnet to use for statically allocated external services
   node_svc_subnet: 10.5.0.1/16	# Subnet to use for service graph
   kubeapi_vlan: 11	        # The VLAN used by the internal physdom for nodes
-  service_vlan: 21 infra_vlan: 3301	# The VLAN used for external LoadBalancer services
-
+  service_vlan: 21			# The VLAN used for external LoadBalancer services
+  infra_vlan: 3301
 ```
 
 **Note** The `\*.apps.\<cluster_name\>.\<base_domain\>` records in the user-provisioned DNS should refer to the same IP address used in the ingressVIPs in install-config.yaml
