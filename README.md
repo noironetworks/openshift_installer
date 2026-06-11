@@ -28,6 +28,11 @@ Note that some certified releases do not have an accompanying installation docum
 * [OpenShift 4.14 Agent-based Installation on VMware vSphere](docs/installers/agent-based-openshift-4-14-on-vmware-vsphere.md)
 
 ### Cisco Published Documents
+#### OpenShift 4.21
+* [OpenShift 4.21 Agent-based Installation on Bare Metal](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-baremetal/installing-agent-based-openshift-4-21-on-baremetal.html)
+* [OpenShift 4.21 Agent-based Installation on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-agent-based-openshift-4-21-vmware-vsphere.html)
+* [OpenShift 4.21 on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-openshift-4-21-on-vmware-vsphere.html)
+* [OpenShift 4.21 on OpenStack 17.1](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-openstack/installing-openshift-4-21-on-openstack-17-1.html)
 #### OpenShift 4.20
 * [OpenShift 4.20 Agent-based Installation on Bare Metal](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-baremetal/installing-agent-based-openshift-4-20-on-baremetal.html)
 * [OpenShift 4.20 Agent-based Installation on VMware vSphere](https://www.cisco.com/c/en/us/td/docs/dcn/aci/containers/installation/openshift-on-vsphere/installing-agent-based-openshift-4-20-vmware-vsphere.html)
