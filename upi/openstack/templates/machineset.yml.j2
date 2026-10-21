@@ -1,0 +1,58 @@
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  labels:
+    machine.openshift.io/cluster-api-cluster: {{ os_infra_id }}
+    machine.openshift.io/cluster-api-machine-role: worker
+    machine.openshift.io/cluster-api-machine-type: worker
+  name: {{ mcset.stdout }}
+  namespace: openshift-machine-api
+spec:
+  replicas: {{ os_compute_nodes_number }}
+  selector:
+    matchLabels:
+      machine.openshift.io/cluster-api-cluster: {{ os_infra_id }}
+      machine.openshift.io/cluster-api-machineset: {{ mcset.stdout }}
+  template:
+    metadata:
+      labels:
+        machine.openshift.io/cluster-api-cluster: {{ os_infra_id }}
+        machine.openshift.io/cluster-api-machine-role: worker
+        machine.openshift.io/cluster-api-machine-type: worker
+        machine.openshift.io/cluster-api-machineset: {{ mcset.stdout }}
+    spec:
+      metadata: {}
+      providerSpec:
+        value:
+          cloudName: openstack
+          networks:
+          - filter: {}
+            subnets:
+            - filter:
+                name: {{ os_subnet }}
+                uuid: {{ nodes_subnet_uuid.stdout }}
+            uuid: {{ nodes_network_uuid.stdout }}
+          - filter: {}
+            subnets:
+            - filter:
+                name: {{ os_infra_id }}-acicontainers-nodes
+                uuid: {{ acicontainers_nodes_subnet_uuid.stdout }}
+            uuid: {{ acicontainers_nodes_network_uuid.stdout }}
+          userDataSecret:
+            name: worker-user-data
+          cloudsSecret:
+            name: openstack-cloud-credentials
+            namespace: openshift-machine-api
+          serverMetadata:
+            Name: {{ os_infra_id }}-worker
+            openshiftClusterID: {{ os_infra_id }}
+          securityGroups:
+            - filter: {}
+              name: {{ os_infra_id }}-worker
+          kind: OpenstackProviderSpec
+          tags:
+            - openshiftClusterID={{ os_infra_id }}
+          image: {{ os_image_rhcos }}
+          apiVersion: openstackproviderconfig.openshift.io/v1alpha1
+          flavor: {{ os_flavor_worker }}
+

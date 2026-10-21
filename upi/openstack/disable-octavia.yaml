@@ -1,0 +1,48 @@
+- hosts: all
+  gather_facts: no
+  tasks:
+
+  - name: Get content of cloud-provider-config.yaml file.
+    shell: cat {{ playbook_dir }}/manifests/cloud-provider-config.yaml
+    register: cloud_provider_config
+
+  - name: |
+      Ensure Octavia is disabled.
+      For case when [LoadBalancer] section does exists and Octavia
+      intergration is enabled.
+    lineinfile:
+      path: "{{ playbook_dir }}/manifests/cloud-provider-config.yaml"
+      regexp: '(\s+)enabled = .+'
+      line: '\1enabled = false'
+      backrefs: yes
+    when:
+      - cloud_provider_config.stdout.find('[LoadBalancer]') != -1
+      - cloud_provider_config.stdout.find('enabled') != -1
+      - os_networking_type == "CiscoACI"
+
+  - name: |
+      Ensure Octavia is disabled.
+      For case when [LoadBalancer] section does exists and Octavia
+      integration option is not set.
+    lineinfile:
+      path: "{{ playbook_dir }}/manifests/cloud-provider-config.yaml"
+      insertafter: '\s*\[LoadBalancer\]'
+      line: '    enabled = false'
+      state: present
+    when:
+      - cloud_provider_config.stdout.find('[LoadBalancer]') != -1
+      - cloud_provider_config.stdout.find('enabled') == -1
+      - os_networking_type == "CiscoACI"
+
+  - name: |
+      Ensure Octavia is disabled.
+      Adding enabled = false in [LoadBalancer] section of config
+      disables the Octavia integration.
+    lineinfile:
+      path: "{{ playbook_dir }}/manifests/cloud-provider-config.yaml"
+      insertbefore: '\s*\[Global\]'
+      line: "    [LoadBalancer]\n    enabled = false"
+      state: present
+    when:
+      - cloud_provider_config.stdout.find('[LoadBalancer]') == -1
+      - os_networking_type == "CiscoACI"
